@@ -1,9 +1,9 @@
 ## **Asynchronous Communication**
 ### **Introduction to Asynchronous Architecture**
-![Screenshot 2025-11-16 at 20.14.05.png](Screenshot_2025-11-16_at_20.14.05.png)
-![Screenshot 2025-11-16 at 20.24.31.png](Screenshot_2025-11-16_at_20.24.31.png)
-![Screenshot 2025-11-16 at 20.23.34.png](Screenshot_2025-11-16_at_20.23.34.png)
-![Screenshot 2025-11-16 at 20.23.23.png](Screenshot_2025-11-16_at_20.23.23.png)
+![Screenshot 2025-11-16 at 20.14.05.png](media/Screenshot_2025-11-16_at_20.14.05.png)
+![Screenshot 2025-11-16 at 20.24.31.png](media/Screenshot_2025-11-16_at_20.24.31.png)
+![Screenshot 2025-11-16 at 20.23.34.png](media/Screenshot_2025-11-16_at_20.23.34.png)
+![Screenshot 2025-11-16 at 20.23.23.png](media/Screenshot_2025-11-16_at_20.23.23.png)
 ## **1. Why We Need Asynchronous Communication**
 We introduce an asynchronous communication layer to remove direct service dependencies.
 ### Key motivations:

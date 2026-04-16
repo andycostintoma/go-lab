@@ -20,7 +20,7 @@ From my experience, **coverage like 70-80% is a pretty good result in Go**.
 
 It’s also not the best idea to cover everything with *component* or *end-to-end tests*. First – you will not be able to do that because of the inability to simulate some error scenarios, like rollbacks on the repository. Second – it will break the first rule. These tests will be slow.
 
-![Testing Application](file21.svg) ![E2E Testing](file22.svg)
+![Testing Application](media/file21.svg) ![E2E Testing](media/file22.svg)
 
 Tests on several layers should also overlap, so we will know that integration is done correctly.
 
@@ -650,7 +650,7 @@ func (h HttpServer) CancelTraining(w http.ResponseWriter, r *http.Request) {
 
 This method is the entry point to the application. There’s not much logic there, so let’s go deeper into the `db.CancelTraining` method.
 
-![](file26.jpg)
+![](media/file26.jpg)
 
 Inside the Firestore transaction, there’s a lot of code that doesn’t belong to database handling.
 
@@ -757,7 +757,7 @@ The rule states that **outer layers (implementation details) can refer to inner 
 - **Ports** can import inner layers. Ports are the entry points to the application, so they often execute application services or commands. However, they can’t directly access **Adapters**.
 - **Adapters** can import inner layers. Usually, they will operate on types found in **Application** and **Domain**, for example, retrieving them from the database.
 
-![](file27.jpg)
+![](media/file27.jpg)
 
 Again, it’s not a new idea. **The Dependency Inversion Principle is the “D” in [SOLID](https://en.wikipedia.org/wiki/SOLID)**. Do you think it applies only to OOP? It just happens that **[Go interfaces make a perfect match with it](https://dave.cheney.net/2016/08/20/solid-go-design)**.
 
@@ -2054,13 +2054,13 @@ Let’s revisit the concept of layers we’ve introduced in previous chapters. I
 
 Take a look at a diagram that will help us understand the project’s structure. Below is a generic service built with the approach used in Wild Workouts.
 
-![](file37.jpg)
+![](media/file37.jpg)
 
 All external inputs start on the left. The only entry point to the application is through the **Ports** layer (HTTP handlers, Pub/Sub message handlers). Ports execute relevant handlers in the **App** layer. Some of these will call the **Domain** code, and some will use **Adapters**, which are the only way out of the service. The adapters layer is where your database queries and HTTP clients live.
 
 The diagram below shows the layers and flow of a part of the trainer service in Wild Workouts.
 
-![](file38.jpg)
+![](media/file38.jpg)
 
 Let’s now see what types of tests we would need to cover all of it.
 
@@ -2068,7 +2068,7 @@ Let’s now see what types of tests we would need to cover all of it.
 
 We kick off with the inner layers and something everyone is familiar with: unit tests.
 
-![](file39.jpg)
+![](media/file39.jpg)
 
 The domain layer is where the most complex logic of your service lives. However, **the tests here should be some of the simplest to write and running super fast.** There are no external dependencies in the domain, so you don’t need any special infrastructure or mocks (except for really complex scenarios, but let’s leave that for now).
 
@@ -2178,7 +2178,7 @@ In our context, **an integration test is a test that checks if an adapter works 
 
 These tests are not about checking whether the database works correctly, but whether you use it correctly (the **integration** part). It’s also an excellent way to verify if you know how to use the database internals, like handling transactions.
 
-![](file40.jpg)
+![](media/file40.jpg)
 
 Because we need real infrastructure, **integration tests are more challenging than unit tests to write and maintain.** Usually, we can use docker-compose to spin up all dependencies.
 
@@ -2312,7 +2312,7 @@ To ensure each service works correctly internally, **we introduce component test
 
 We will call real port handlers and use the infrastructure provided by Docker. However, we will **mock all adapters reaching external services**.
 
-![](file41.jpg)
+![](media/file41.jpg)
 
 You might be wondering, why not test external services as well? After all, we could use Docker containers and test all of them together.
 
@@ -2454,7 +2454,7 @@ In Wild Workouts, it will be similar to running component tests, except we’re 
 
 If you can’t run the entire platform on docker-compose, you need to find a similar approach. It could be a separate Kubernetes cluster or namespace if you’re already using it, or some kind of staging environment.
 
-![](file43.jpg)
+![](media/file43.jpg)
 
 Now comes the part where you’re going to have more questions than answers. Where should you keep end-to-end tests? Which team should own it? Where to run them? How often? Should they be part of the CI/CD pipeline or a separate thing ran from a cronjob?
 
@@ -2505,7 +2505,7 @@ In our case, component tests and end-to-end tests can both be considered accepta
 
 If you like, you can use the [BDD](https://en.wikipedia.org/wiki/Behavior-driven_development) style for some of them — it makes them easier to read but adds some boilerplate.
 
-![](file44.jpg)
+![](media/file44.jpg)
 
 #### Can we sleep well now?
 
@@ -3588,7 +3588,7 @@ Notice the `waitFor` key. It makes a step wait only for other specified steps. S
 
 Here’s a more readable version of what’s going on:
 
-![](file47.jpg)
+![](media/file47.jpg)
 
 We have a similar workflow for each service: lint (static analysis), build the Docker image, and deploy it as one or two Cloud Run services.
 
@@ -3627,7 +3627,7 @@ To run it on Cloud Build, we can use the `docker/compose` image.
 
 Since we filled `waitFor` with proper step names, we can be sure the correct images are present. This is what we’ve just added:
 
-![](file48.jpg)
+![](media/file48.jpg)
 
 The first override we add to `docker-compose.ci.yml` makes each service use docker images by the tag instead of building one from `docker/app/Dockerfile`. This ensures our tests check the same images we’re going to deploy.
 
@@ -3805,7 +3805,7 @@ The last thing we add is running `docker-compose down` after all tests have pass
 
 The second part of our pipeline looks like this now:
 
-![](file49.jpg)
+![](media/file49.jpg)
 
 Here’s how running the tests locally looks like (I’ve introduced this `make` target in the previous chapter). It’s exactly the same commands as in the CI, just with different `.env` files.
 
@@ -4010,7 +4010,7 @@ Event Storming is a game-changer for Strategic DDD patterns and software develop
 
 **Event Storming is a workshop during which people with questions (often developers) meet with people with answers (often stakeholders).** During the session, they can quickly explore complex business domains. In the beginning, you are focusing on building an entirely working flow based on *Domain Events* (orange sticky notes). Event Storming is a super flexible method. Thanks to that, you can verify if your solution meets expected requirements. You can also explore data flow, potential problems, or UX depending on the session’s goal.
 
-![](file55.png) ![Event Storming that we did at Karhoo.](file56.png)
+![](media/file55.png) ![Event Storming that we did at Karhoo.](media/file56.png)
 
 **Verifying if the solution has no gaps and is about what users asked takes minutes. Introducing changes and verifying ideas in the developed and deployed code is hugely more expensive. Changing a sticky note on the board is extremely cheap.**
 
@@ -4078,7 +4078,7 @@ It took me time to see **how many communication issues between developers and no
 
 Would you be surprised if I told you that Event Storming will help you develop Ubiquitous Language? Running the session together with stakeholders forces you to talk with them. **It’s hard to build a solution together when you can’t understand each other.** That’s why it’s critical to not miss your stakeholders at the workshop!
 
-![Brainstorm.](file60.jpg) ![From brainstorm to working flow](file61.jpg)
+![Brainstorm.](media/file60.jpg) ![From brainstorm to working flow](media/file61.jpg)
 
 #### Does DDD solve all problems?
 

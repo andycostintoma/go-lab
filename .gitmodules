@@ -1,3 +1,6 @@
 [submodule "ultimate_go/gotraining"]
 	path = ultimate_go/gotraining
 	url = https://github.com/ardanlabs/gotraining.git
+[submodule "go_with_domain/wild-workouts-go-ddd-example"]
+	path = go_with_domain/wild-workouts-go-ddd-example
+	url = https://github.com/ThreeDotsLabs/wild-workouts-go-ddd-example.git
