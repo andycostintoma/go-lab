@@ -1,0 +1,8 @@
+node_modules
+pact.log
+.idea
+.terraform/
+*.tfstate
+*.tfstate.*
+terraform.tfvars
+*.auto.tfvars

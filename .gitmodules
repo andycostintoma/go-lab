@@ -1,0 +1,3 @@
+[submodule "ultimate_go/gotraining"]
+	path = ultimate_go/gotraining
+	url = https://github.com/ardanlabs/gotraining.git
