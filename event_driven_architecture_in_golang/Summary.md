@@ -209,7 +209,7 @@ Figure 1.15: autonomy vs central coordination.
 - message queues, event streams, and event stores are not interchangeable.
 - EDA improves decoupling and extensibility but makes consistency and tracing harder.
 
-## How This Connects to the Repo
+## Repo Anchors
 
 - The repository mirrors the architecture progression instead of starting at the final architecture immediately.
 - `02_Modular_Monolith/` shows the baseline synchronous modular monolith.
@@ -503,7 +503,7 @@ Costs:
 - CQRS separates read and write concerns when one model no longer fits both.
 - modular monolith is the recommended default for greenfield systems.
 
-## How This Connects to the Repo
+## Repo Anchors
 
 The repository takes this chapter very literally:
 
@@ -874,7 +874,7 @@ Two initial MallBots decisions called out:
 - BDD turns discoveries into executable specifications.
 - ADRs preserve the why behind technical choices.
 
-## Repo Artifacts
+## Repo Anchors
 
 The planning artifacts are checked in:
 
@@ -3650,7 +3650,7 @@ The implementation adds two new capabilities:
 
 ### Adding Support for the Command and Reply Messages
 
-`07_Message_Workflows` extends the event-centric messaging layer with request/response workflow messages.
+`07_Message_Workflows_Orchestrated_Saga` extends the event-centric messaging layer with request/response workflow messages.
 
 `internal/ddd/command.go` defines commands and command handlers:
 
@@ -3804,7 +3804,7 @@ The order-creation refactor is the concrete payoff.
 
 Before this change, `ordering/internal/application/commands/create_order.go` directly called remote collaborators during one command handler.
 
-In `07_Message_Workflows`, `CreateOrder` becomes local again:
+In `07_Message_Workflows_Orchestrated_Saga`, `CreateOrder` becomes local again:
 
 ```go
 func (h CreateOrderHandler) CreateOrder(ctx context.Context, cmd CreateOrder) error {
@@ -4088,31 +4088,31 @@ That is the key inversion from the earlier code:
 
 ## Repo Anchors
 
-The clearest implementation appears in `code/07_Message_Workflows/`.
+The clearest implementation appears in `code/07_Message_Workflows_Orchestrated_Saga/`.
 
 High-value files to read alongside the summary:
 
-- `code/07_Message_Workflows/internal/ddd/command.go`
-- `code/07_Message_Workflows/internal/ddd/reply.go`
-- `code/07_Message_Workflows/internal/am/command_messages.go`
-- `code/07_Message_Workflows/internal/am/reply_messages.go`
-- `code/07_Message_Workflows/internal/sec/orchestrator.go`
-- `code/07_Message_Workflows/internal/sec/saga.go`
-- `code/07_Message_Workflows/internal/sec/saga_step.go`
-- `code/07_Message_Workflows/internal/sec/saga_repository.go`
-- `code/07_Message_Workflows/internal/postgres/saga_store.go`
-- `code/07_Message_Workflows/cosec/module.go`
-- `code/07_Message_Workflows/cosec/internal/saga.go`
-- `code/07_Message_Workflows/cosec/internal/handlers/integration_events.go`
-- `code/07_Message_Workflows/cosec/internal/handlers/replies.go`
-- `code/07_Message_Workflows/customers/internal/handlers/commands.go`
-- `code/07_Message_Workflows/depot/internal/handlers/commands.go`
-- `code/07_Message_Workflows/ordering/internal/application/commands/create_order.go`
-- `code/07_Message_Workflows/ordering/internal/application/commands/approve_order.go`
-- `code/07_Message_Workflows/ordering/internal/application/commands/reject_order.go`
-- `code/07_Message_Workflows/ordering/internal/handlers/commands.go`
-- `code/07_Message_Workflows/payments/internal/handlers/commands.go`
-- `code/07_Message_Workflows/docker/database/011_create_cosec_schema.sh`
+- `code/07_Message_Workflows_Orchestrated_Saga/internal/ddd/command.go`
+- `code/07_Message_Workflows_Orchestrated_Saga/internal/ddd/reply.go`
+- `code/07_Message_Workflows_Orchestrated_Saga/internal/am/command_messages.go`
+- `code/07_Message_Workflows_Orchestrated_Saga/internal/am/reply_messages.go`
+- `code/07_Message_Workflows_Orchestrated_Saga/internal/sec/orchestrator.go`
+- `code/07_Message_Workflows_Orchestrated_Saga/internal/sec/saga.go`
+- `code/07_Message_Workflows_Orchestrated_Saga/internal/sec/saga_step.go`
+- `code/07_Message_Workflows_Orchestrated_Saga/internal/sec/saga_repository.go`
+- `code/07_Message_Workflows_Orchestrated_Saga/internal/postgres/saga_store.go`
+- `code/07_Message_Workflows_Orchestrated_Saga/cosec/module.go`
+- `code/07_Message_Workflows_Orchestrated_Saga/cosec/internal/saga.go`
+- `code/07_Message_Workflows_Orchestrated_Saga/cosec/internal/handlers/integration_events.go`
+- `code/07_Message_Workflows_Orchestrated_Saga/cosec/internal/handlers/replies.go`
+- `code/07_Message_Workflows_Orchestrated_Saga/customers/internal/handlers/commands.go`
+- `code/07_Message_Workflows_Orchestrated_Saga/depot/internal/handlers/commands.go`
+- `code/07_Message_Workflows_Orchestrated_Saga/ordering/internal/application/commands/create_order.go`
+- `code/07_Message_Workflows_Orchestrated_Saga/ordering/internal/application/commands/approve_order.go`
+- `code/07_Message_Workflows_Orchestrated_Saga/ordering/internal/application/commands/reject_order.go`
+- `code/07_Message_Workflows_Orchestrated_Saga/ordering/internal/handlers/commands.go`
+- `code/07_Message_Workflows_Orchestrated_Saga/payments/internal/handlers/commands.go`
+- `code/07_Message_Workflows_Orchestrated_Saga/docker/database/011_create_cosec_schema.sh`
 
 The cleanest end-to-end flow to follow is:
 
@@ -4134,3 +4134,701 @@ The cleanest end-to-end flow to follow is:
 - [Saga Pattern](https://microservices.io/patterns/data/saga.html)
 - [Two-Phase Commit Protocol](https://martinfowler.com/articles/patterns-of-distributed-systems/two-phase-commit.html)
 - [Compensating Transaction](https://learn.microsoft.com/en-us/azure/architecture/patterns/compensating-transaction)
+
+# 9: Transactional Messaging
+
+### Technical requirements
+
+- The Go programming language, version 1.18+
+- Docker
+
+Code snapshot used locally: `code/08_Transactional_Messaging/`
+
+### Identifying problems faced by distributed applications
+
+Chapter 8 improved operation-level reliability with sagas, but Chapter 9 shifts to component-level reliability.
+
+- the problem is no longer “how do several modules complete one workflow?”
+- the problem is “how do local state changes and published messages succeed or fail together?”
+
+#### Identifying problems in synchronous applications
+
+![Figure 9.1 - Synchronous interaction between Payments and Ordering](media/Figure_9.1_B18368.jpg)
+
+Figure 9.1: synchronous calls still suffer from split writes because one module can update itself and then fail while notifying another module.
+
+In the synchronous version:
+
+- `payments` marks an invoice paid
+- then calls `ordering` to complete the order
+- then persists its own updated invoice
+
+The reliability issue is already present even before introducing a broker.
+
+#### Identifying problems in asynchronous applications
+
+![Figure 9.2 - Asynchronous interactions of the Payment module](media/Figure_9.2_B18368.jpg)
+
+Figure 9.2: asynchronous publication removes temporal coupling but does not remove split-write risk.
+
+In the asynchronous version:
+
+- `payments` publishes `InvoicePaid`
+- `ordering` consumes that event and reacts later
+
+That loosens coupling, but the same failure still exists:
+
+- local state may be written without the message being durably published
+- the message may be published without the local write being durable
+
+That is the dual-write problem.
+
+#### Examining potential ways to address the problem
+
+The book rejects a few tempting but incomplete fixes:
+
+- sagas help with workflow consistency, not missing local writes or missing messages
+- reordering writes still leaves a final second write that can fail
+- local database transactions help only if every write can be turned into a database write
+
+#### The singular write solution
+
+The chapter’s answer is to collapse “state changes + message publication” into one transactional boundary.
+
+- create one database transaction for the whole request/message
+- persist outgoing messages into the database instead of publishing them immediately
+- later publish those saved messages from an outbox processor
+
+That is the Transactional Outbox pattern.
+
+### Exploring transactional boundaries
+
+The first enabling change is a request-scoped transaction boundary.
+
+- each incoming gRPC request or incoming message gets its own scope
+- that scope owns one `*sql.Tx`
+- repositories, handlers, and streams are rebuilt inside that scope
+
+This lets the whole handling path share one transaction without threading `*sql.Tx` through every method signature.
+
+#### How the implementation will work
+
+The implementation relies on a new DI container that supports two lifetimes:
+
+- singletons for app-lifetime dependencies
+- scoped values for per-request dependencies
+
+The key tradeoff is more composition-root complexity in exchange for cleaner application and repository APIs.
+
+#### The di package
+
+![Figure 9.3 - The container type, interface, and dependencies](media/Figure_9.3_B18368.jpg)
+
+Figure 9.3: `internal/di` provides a minimal container with singleton and scoped dependency creation.
+
+The context lookup helper is intentionally tiny:
+
+```go
+Get(ctx context.context, key string) any
+```
+
+The actual implementation is in `internal/di/container.go`.
+
+##### Setting up a container
+
+```go
+container := di.New()
+container.AddSingleton("db",
+    func(c di.Container) (any, error) {
+        return mono.DB(), nil
+    },
+)
+container.AddScoped("tx",
+    func(c di.Container) (any, error) {
+        db := c.Get("db").(*sql.DB)
+        return db.Begin()
+    },
+)
+```
+
+The pattern is:
+
+- register long-lived shared things as singletons
+- register request-lifetime things like transactions as scoped values
+
+##### Setting the lifetime of dependencies
+
+```go
+repo := container.AddScoped("some-repo",
+    func(c di.Container) (any, error) {
+        db := c.Get("db").(*sql.DB)
+        return postgres.NewSomeRepo(db), nil
+    },
+)
+```
+
+Singletons are created once and reused.
+Scoped values are created once per scope and reused within that scope.
+
+![Figure 9.4 - Dependency and container usage in the composition root](media/Figure_9.4_B18368.jpg)
+
+Figure 9.4: composition roots become factories for per-request graphs rather than direct one-time construction.
+
+##### Using scoped containers
+
+```go
+container := di.New()
+container.AddSingleton("db", dbFn)
+container.AddScoped("tx", txFn)
+db1 := container.Get("db")
+tx1 := container.Get("tx")
+ctx := container.Scoped(context.Background())
+db2 := di.Get(ctx, "db") // same instance as db1
+tx2 := di.Get(ctx, "tx") // entirely new instance
+```
+
+The important rule is:
+
+- same scope -> same scoped dependency instance
+- different scope -> new scoped dependency instance
+
+#### Updating the Depot module with dependency containers
+
+`depot` is the demonstration module because it has gRPC handlers, integration handlers, domain event handlers, and command handlers.
+
+The composition root starts by switching to a container:
+
+```go
+func (Module) Startup(
+    ctx context.Context, mono monolith.Monolith,
+) (err error) {
+    container := di.New()
+    // ...
+}
+```
+
+##### Driven adapters
+
+Singleton factory style:
+
+```go
+container.AddSingleton("registry",
+    func(c di.Container) (any, error) {
+        reg := registry.New()
+        err := storespb.Registrations(reg)
+        if err != nil { return nil, err }
+        err = depotpb.Registrations(reg)
+        if err != nil { return nil, err }
+        return reg, nil
+    },
+)
+```
+
+The chapter then shows why scoping repositories directly to `mono.DB().Begin()` is wrong:
+
+```go
+shoppingLists := postgres.NewShoppingListRepository(
+    "depot.shopping_lists",
+    mono.DB(),
+)
+```
+
+```go
+container.AddScoped("shoppingLists",
+    func(c di.Container) (any, error) {
+        return postgres.NewShoppingListRepository(
+            "depot.shopping_lists",
+            mono.DB().Begin(),
+        ), nil
+    },
+)
+```
+
+That would give only that one dependency its own transaction. The fix is to scope the transaction itself:
+
+```go
+container.AddScoped("tx",
+    func(c di.Container) (any, error) {
+        return mono.DB().Begin()
+    },
+)
+```
+
+Then inject that shared transaction into repositories and stores.
+
+![Figure 9.5 - The new DB interface that replaces *sql.DB and *sql.Tx](media/Figure_9.5_B18368.jpg)
+
+Figure 9.5: a shared `DB` interface lets repositories accept either `*sql.DB` or `*sql.Tx`.
+
+Correct scoped repository construction:
+
+```go
+container.AddScoped("shoppingLists",
+    func(c di.Container) (any, error) {
+        return postgres.NewShoppingListRepository(
+            "depot.shopping_lists",
+            c.Get("tx").(*sql.Tx),
+        ), nil
+    },
+)
+```
+
+The same pattern is applied to event stores and snapshot stores too:
+
+```go
+container.AddScoped("aggregateStore",
+    func(c di.Container) (any, error) {
+        tx := c.Get("tx").(*sql.Tx)
+        reg := c.Get("registry").(registry.Registry)
+        return es.AggregateStoreWithMiddleware(
+            pg.NewEventStore(
+                "ordering.events",
+                tx, reg,
+            ),
+            pg.NewSnapshotStore(
+                "ordering.snapshots",
+                tx, reg,
+            ),
+        ), nil
+    },
+)
+```
+
+##### Application and handlers
+
+Application services and handlers also become scoped so they resolve repositories and streams that are already transaction-bound.
+
+```go
+container.AddScoped(
+    "commandHandlers",
+    func(c di.Container) (any, error) {
+        return logging.
+            LogCommandHandlerAccess[ddd.Command](
+            handlers.NewCommandHandlers(
+                c.Get("app").(application.App),
+            ),
+            "Commands",
+            c.Get("logger").(zerolog.Logger),
+        ), nil
+    },
+)
+```
+
+##### Driver adapters
+
+The driver adapters stop accepting already-built app instances and start accepting the container.
+
+```go
+func RegisterDomainEventHandlersTx(container di.Container)
+```
+
+###### Updating the gRPC server
+
+The transactional registration shape becomes:
+
+```go
+func Register(
+    container di.Container,
+    registrar grpc.ServiceRegistrar,
+) error
+```
+
+Representative request wrapper:
+
+```go
+func (s serverTx) CreateShoppingList(
+    ctx context.Context,
+    request *depotpb.CreateShoppingListRequest,
+) (resp *depotpb.CreateShoppingListResponse, err error) {
+    ctx = s.c.Scoped(ctx)
+    defer func(tx *sql.Tx) {
+        err = s.closeTx(tx, err)
+    }(di.Get(ctx, "tx").(*sql.Tx))
+    next := server{
+        app: di.Get(ctx, "app").(application.App),
+    }
+    return next.CreateShoppingList(ctx, request)
+}
+```
+
+Transaction close helper:
+
+```go
+func (s serverTx) closeTx(tx *sql.Tx, err error) error {
+    if p := recover(); p != nil {
+        _ = tx.Rollback()
+        panic(p)
+    } else if err != nil {
+        _ = tx.Rollback()
+        return err
+    } else {
+        return tx.Commit()
+    }
+}
+```
+
+###### Updating the domain event handlers
+
+![Figure 9.6 - Updating the domain dispatcher to use a scoped container](media/Figure_9.6_B18368.jpg)
+
+Figure 9.6: domain event handling must reuse the existing scope instead of creating a new one.
+
+Because domain handlers execute during an already-scoped request, they resolve scoped handlers from the existing context instead of starting a fresh scope:
+
+```go
+func RegisterDomainEventHandlersTx(
+    container di.Container,
+) {
+    handlers := ddd.EventHandlerFunc[ddd.AggregateEvent](
+        func(
+            ctx context.Context,
+            event ddd.AggregateEvent,
+        ) error {
+        domainHandlers := di.
+            Get(ctx, "domainEventHandlers").
+            (ddd.EventHandler[ddd.AggregateEvent])
+        return domainHandlers.HandleEvent(ctx, event)
+    })
+    subscriber := container.
+        Get("domainDispatcher").
+        (*ddd.EventDispatcher[ddd.AggregateEvent])
+    RegisterDomainEventHandlers(subscriber, handlers)
+}
+```
+
+###### Updating the integration event and command handlers
+
+The message handlers follow the same transactional wrapper pattern as `serverTx`:
+
+```go
+evtMsgHandler := am.MessageHandlerFunc
+    [am.IncomingEventMessage](
+    func(
+        ctx context.Context, msg am.IncomingEventMessage,
+    ) error {
+        ctx = container.Scoped(ctx)
+        defer func(tx *sql.Tx) {
+            // rollback or commit like in serverTx...
+        }(di.Get(ctx, "tx").(*sql.Tx))
+        evtHandlers := di.
+            Get(ctx, "integrationEventHandlers").
+            (ddd.EventHandler[ddd.Event])
+        return evtHandlers.HandleEvent(ctx, msg)
+    },
+)
+```
+
+The real repo implementation later adapts this further into raw-message handlers so inbox middleware can be applied.
+
+##### Runs like normal
+
+After only the transaction-boundary refactor, behavior stays the same from the outside.
+
+- handlers still do the same business work
+- but all database writes for a request now live in one local transaction
+
+The dual-write problem is still unresolved at this point because outgoing messages can still be lost after local commit.
+
+### Using an Inbox and Outbox for messages
+
+Once transactional boundaries exist, the chapter uses them to make message handling and message publication atomic with local state changes.
+
+Benefits:
+
+- idempotent message processing
+- no application state fragmentation
+
+#### Implementing a messages inbox
+
+The inbox solves duplicate delivery for consumers.
+
+##### Inbox table schema
+
+```go
+CREATE TABLE depot.inbox (
+  id          text NOT NULL,
+  name        text NOT NULL,
+  subject     text NOT NULL,
+  data        bytea NOT NULL,
+  received_at timestamptz NOT NULL,
+  PRIMARY KEY (id)
+);
+```
+
+Every incoming raw message is recorded. A unique-key conflict means the message was already processed.
+
+##### Inbox middleware
+
+![Figure 9.7 - The InboxStore interface and inbox middleware type](media/Figure_9.7_B18368.jpg)
+
+Figure 9.7: the inbox is middleware around raw-message handling, not business logic inside handlers.
+
+Scoped inbox middleware registration:
+
+```go
+container.AddScoped("inboxMiddleware",
+    func(c di.Container) (any, error) {
+        tx := c.Get("tx").(*sql.Tx)
+        inboxStore := pg.NewInboxStore("depot.inbox", tx)
+        mw := tm.NewInboxHandlerMiddleware(inboxStore)
+        return mw, nil
+    },
+)
+```
+
+##### Updating the handlers
+
+Because inbox middleware works at the raw-message level, Chapter 9 introduces raw-message adapters.
+
+```go
+type eventMsgHandler struct {
+    reg     registry.Registry
+    handler ddd.EventHandler[ddd.Event]
+}
+func NewEventMessageHandler(
+    reg registry.Registry,
+        handler     ddd.EventHandler[ddd.Event],
+) RawMessageHandler {
+    return eventMsgHandler{
+        reg:     reg,
+        handler: handler,
+    }
+}
+func (h eventMsgHandler) HandleMessage(
+    ctx context.Context, msg IncomingRawMessage,
+    ) error {
+    var eventData EventMessageData
+    err := proto.Unmarshal(msg.Data(), &eventData)
+    if err != nil { return err }
+    eventName := msg.MessageName()
+    payload, err := h.reg.Deserialize(
+        eventName, eventData.GetPayload(),
+    )
+    if err != nil { return err }
+    eventMsg := eventMessage{
+        id:         msg.ID(),
+        name:       eventName,
+        payload:    payload,
+        metadata:   eventData.GetMetadata().AsMap(),
+        occurredAt: eventData.GetOccurredAt().AsTime(),
+        msg:        msg,
+    }
+    return h.handler.HandleEvent(ctx, eventMsg)
+}
+```
+
+That adapter is then wrapped with inbox middleware:
+
+```go
+evtMsgHandler := am.RawMessageHandlerFunc(func(
+    ctx context.Context,
+    msg am.IncomingRawMessage,
+    ) (err error) {
+    ctx = container.Scoped(ctx)
+    // existing rollback or commit code snipped...
+    evtHandlers := am.RawMessageHandlerWithMiddleware(
+        am.NewEventMessageHandler(
+            di.Get(ctx, "registry").
+                    (registry.Registry),
+            di.Get(ctx, "integrationEventHandlers").
+                    (ddd.EventHandler[ddd.Event]),
+        ),
+        di.Get(ctx, "inboxMiddleware").
+              (am.RawMessageHandlerMiddleware),
+    )
+    return evtHandlers.HandleMessage(ctx, msg)
+})
+```
+
+Subscriptions now hang directly off the raw stream:
+
+```go
+subscriber := container.Get("stream").(am.RawMessageStream)
+```
+
+That is what lets inbox deduplication run before message-type decoding and business handling.
+
+#### Implementing a messages outbox
+
+The outbox solves the publisher side of the dual-write problem.
+
+![Figure 9.8 - Saving messages into an outbox table](media/Figure_9.8_B18368.jpg)
+
+Figure 9.8: outgoing messages are written into the database inside the same transaction as local state changes.
+
+##### Outbox table schema
+
+```go
+CREATE TABLE depot.outbox(
+  id           text NOT NULL,
+  name         text NOT NULL,
+  subject      text NOT NULL,
+  data         bytea NOT NULL,
+  published_at timestamptz,
+  PRIMARY KEY (id)
+);
+CREATE INDEX depot_unpublished_idx
+  ON depot.outbox (published_at)
+  WHERE published_at IS NULL;
+```
+
+The main difference from inbox is `published_at`, which stays `NULL` until the processor publishes the message.
+
+##### Outbox middleware
+
+![Figure 9.9 - The OutboxStore interface and outbox middleware type](media/Figure_9.9_B18368.jpg)
+
+Figure 9.9: outbox interception happens on the stream publish side.
+
+Scoped transactional stream wrapper:
+
+```go
+container.AddScoped("txStream",
+    func(c di.Container) (any, error) {
+        tx := c.Get("tx").(*sql.Tx)
+        outboxStore := pg.NewOutboxStore(
+            "depot.outbox", tx,
+        )
+        return am.RawMessageStreamWithMiddleware(
+            c.Get("stream").
+                (am.RawMessageStream),
+            tm.NewOutboxStreamMiddleware(outboxStore),
+        ), nil
+    },
+)
+```
+
+Message-type streams are then rebuilt on top of `txStream` instead of the original raw stream:
+
+```go
+container.AddScoped("eventStream",
+    func(c di.Container) (any, error) {
+        return am.NewEventStream(
+            c.Get("registry").(registry.Registry),
+            c.Get("txStream").(am.RawMessageStream),
+        ), nil
+    },
+)
+```
+
+This is the mechanism that makes event, command, and reply publication transactional.
+
+##### The outbox message processor
+
+![Figure 9.10 - Processing outbox messages](media/Figure_9.10_B18368.jpg)
+
+Figure 9.10: the second half of the pattern publishes saved outbox rows later.
+
+![Figure 9.11 - The outbox processor interface and struct](media/Figure_9.11_B18368.jpg)
+
+Figure 9.11: the processor is a long-running background component that polls and publishes.
+
+Singleton processor registration:
+
+```go
+container.AddSingleton("outboxProcessor",
+    func(c di.Container) (any, error) {
+        return tm.NewOutboxProcessor(
+            c.Get("stream").(am.RawMessageStream),
+            pg.NewOutboxStore(
+                "depot.outbox",
+                c.Get("db").(*sql.DB),
+            ),
+        ), nil
+    },
+)
+```
+
+Processor startup:
+
+```go
+func startOutboxProcessor(
+    ctx context.Context, container di.Container,
+) {
+    outboxProcessor := container.
+        Get("outboxProcessor").
+          (tm.OutboxProcessor)
+    logger := container.Get("logger").(zerolog.Logger)
+    go func() {
+        err := outboxProcessor.Start(ctx)
+        if err != nil {
+            logger.Error().
+                Err(err).
+                Msg("depot outbox processor encountered
+                     an error")
+        }
+    }()
+}
+```
+
+The implementation in `internal/tm/outbox_processor.go` polls up to 50 unpublished rows, publishes them, marks them published, and sleeps 500ms only when there is no work.
+
+This processor still has a small dual-write window between publish and `MarkPublished(...)`, but that failure mode now causes duplicate delivery rather than lost messages, and duplicates are handled by the inbox.
+
+### Summary
+
+Chapter 9’s big shift is:
+
+- chapter 8 made workflows reliable at the business-operation level
+- chapter 9 makes component interactions more reliable at the local-write plus message-publication level
+
+The chapter adds:
+
+- scoped transaction boundaries around requests and message handling
+- inbox tables and middleware for idempotent consumption
+- outbox tables and middleware for atomic local write + message persistence
+- background outbox processors to publish saved messages later
+
+The net effect is a much more resilient asynchronous system:
+
+- local state and outgoing messages are committed together
+- duplicate incoming messages are tolerated safely
+- message loss risk is greatly reduced
+
+## Key Takeaways
+
+- Chapter 9 solves component-level reliability problems that remain after the move to asynchronous messaging.
+- The dual-write problem still exists whether the second write is a synchronous RPC or an asynchronous event publish.
+- The DI container is an implementation tool for request-scoped transactions, not the main goal of the chapter.
+- Inbox tables plus middleware make message consumption idempotent by recording incoming message IDs before business handling completes.
+- Outbox tables plus middleware make local state changes and outgoing messages durable in the same transaction.
+- Background outbox processors turn stored messages into eventually published broker messages.
+- The remaining processor failure mode is duplicate publication, which is acceptable because inbox deduplication makes consumers tolerant of repeats.
+
+## Repo Anchors
+
+The clearest implementation appears in `code/08_Transactional_Messaging/`.
+
+High-value files to read alongside the summary:
+
+- `code/08_Transactional_Messaging/internal/di/container.go`
+- `code/08_Transactional_Messaging/internal/postgres/db.go`
+- `code/08_Transactional_Messaging/internal/tm/inbox_middleware.go`
+- `code/08_Transactional_Messaging/internal/tm/outbox_middleware.go`
+- `code/08_Transactional_Messaging/internal/tm/outbox_processor.go`
+- `code/08_Transactional_Messaging/internal/postgres/inbox_store.go`
+- `code/08_Transactional_Messaging/internal/postgres/outbox_store.go`
+- `code/08_Transactional_Messaging/depot/module.go`
+- `code/08_Transactional_Messaging/depot/internal/grpc/server_transaction.go`
+- `code/08_Transactional_Messaging/depot/internal/handlers/domain_events_transaction.go`
+- `code/08_Transactional_Messaging/depot/internal/handlers/integration_events_transaction.go`
+- `code/08_Transactional_Messaging/payments/module.go`
+- `code/08_Transactional_Messaging/search/module.go`
+
+The cleanest end-to-end flow to follow is:
+
+1. `internal/di/container.go`
+2. `depot/module.go`
+3. `depot/internal/grpc/server_transaction.go`
+4. `depot/internal/handlers/integration_events_transaction.go`
+5. `internal/tm/inbox_middleware.go`
+6. `internal/postgres/inbox_store.go`
+7. `internal/tm/outbox_middleware.go`
+8. `internal/postgres/outbox_store.go`
+9. `internal/tm/outbox_processor.go`
+
+## Further Reading
+
+- [Transactional Outbox](https://microservices.io/patterns/data/transactional-outbox.html)
+- [Idempotent Consumer](https://microservices.io/post/microservices/patterns/2020/10/16/idempotent-consumer.html)
+- [Dependency Injection in Go](https://go.dev/blog/wire)

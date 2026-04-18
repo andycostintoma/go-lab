@@ -4470,7 +4470,7 @@ Now, let’s take a look at both types of sagas and how we might use either to h
 
 In a choreographed saga, each participant knows the role they play. With no coordinator to tell them what to do, each participant listens for the events that signal their turn. The coordination logic is spread out across the components and is not centralized.
 
-Our example from *Figure 8**.4* could be accomplished by publishing the following events into the message broker:
+Our example from *Figure 8.4* could be accomplished by publishing the following events into the message broker:
 
 1.  The **Order Processing** module would publish an **OrderCreated** event after creating a new order in the pending state.
 2.  The **Customers** module listens for **OrderCreated** events and publishes a **CustomerApproved** event after confirming the customer on the order.
@@ -5529,7 +5529,7 @@ container.AddScoped("tx",
 )
 ```
 
-The **tx** dependency can now be injected into the dependencies that need a database connection. This switch to using transactions is what necessitates a small field type change in the application code. In all of the repository implementations, we have used the **\*sql.DB** type for the **db** fields and we want to now pass in a **\*****sql.Tx** type.
+The **tx** dependency can now be injected into the dependencies that need a database connection. This switch to using transactions is what necessitates a small field type change in the application code. In all of the repository implementations, we have used the **\*sql.DB** type for the **db** fields and we want to now pass in a **\*sql.Tx** type.
 
 To allow this, a new interface is added to the shared **internal/postgres** package that can be used to allow either a **\*sql.DB** or **\*sql.Tx** type to be used, as illustrated here:
 

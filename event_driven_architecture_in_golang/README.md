@@ -17,7 +17,7 @@ Inside `code/`, the material progresses through stages such as:
 - `04_Event_Sourcing`
 - `05_Asynchronous_Connections`
 - `06_Event_Carried_State_Transfer`
-- `07_Message_Workflows`
+- `07_Message_Workflows_Orchestrated_Saga`
 - later chapter folders that continue into broader production concerns
 
 ## What it covers

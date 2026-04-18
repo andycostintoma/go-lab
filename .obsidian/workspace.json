@@ -1,0 +1,226 @@
+{
+  "main": {
+    "id": "d5b276d69fb5e2ee",
+    "type": "split",
+    "children": [
+      {
+        "id": "966294a4ea15a93a",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "9c54bef072dec55b",
+            "type": "leaf",
+            "state": {
+              "type": "markdown",
+              "state": {
+                "file": "event_driven_architecture_in_golang/Event_Driven_Architecture_In_Golang.md",
+                "mode": "source",
+                "source": false
+              },
+              "icon": "lucide-file",
+              "title": "Event_Driven_Architecture_In_Golang"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "vertical"
+  },
+  "left": {
+    "id": "d73daa9fa2fd2ca7",
+    "type": "split",
+    "children": [
+      {
+        "id": "cd1c1ab9f7c1623c",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "fad555ac33013f55",
+            "type": "leaf",
+            "state": {
+              "type": "file-explorer",
+              "state": {
+                "sortOrder": "alphabetical",
+                "autoReveal": false
+              },
+              "icon": "lucide-folder-closed",
+              "title": "Files"
+            }
+          },
+          {
+            "id": "f8b1cb5fd0316390",
+            "type": "leaf",
+            "state": {
+              "type": "search",
+              "state": {
+                "query": "",
+                "matchingCase": false,
+                "explainSearch": false,
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical"
+              },
+              "icon": "lucide-search",
+              "title": "Search"
+            }
+          },
+          {
+            "id": "6b052f3cb4171d1b",
+            "type": "leaf",
+            "state": {
+              "type": "bookmarks",
+              "state": {},
+              "icon": "lucide-bookmark",
+              "title": "Bookmarks"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300
+  },
+  "right": {
+    "id": "c4c492248cdf31a5",
+    "type": "split",
+    "children": [
+      {
+        "id": "0a883d3c2a143481",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "5608815a0735bd53",
+            "type": "leaf",
+            "state": {
+              "type": "backlink",
+              "state": {
+                "file": "event_driven_architecture_in_golang/Event_Driven_Architecture_In_Golang.md",
+                "collapseAll": true,
+                "extraContext": false,
+                "sortOrder": "alphabetical",
+                "showSearch": false,
+                "searchQuery": "",
+                "backlinkCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-coming-in",
+              "title": "Backlinks for Event_Driven_Architecture_In_Golang"
+            }
+          },
+          {
+            "id": "e58d1032667c44ce",
+            "type": "leaf",
+            "state": {
+              "type": "outgoing-link",
+              "state": {
+                "file": "event_driven_architecture_in_golang/Event_Driven_Architecture_In_Golang.md",
+                "linksCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-going-out",
+              "title": "Outgoing links from Event_Driven_Architecture_In_Golang"
+            }
+          },
+          {
+            "id": "7f0771eb63a5cdb7",
+            "type": "leaf",
+            "state": {
+              "type": "tag",
+              "state": {
+                "sortOrder": "frequency",
+                "useHierarchy": true,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-tags",
+              "title": "Tags"
+            }
+          },
+          {
+            "id": "d7c74d4bc347aea9",
+            "type": "leaf",
+            "state": {
+              "type": "all-properties",
+              "state": {
+                "sortOrder": "frequency",
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-archive",
+              "title": "All properties"
+            }
+          },
+          {
+            "id": "f12258b62b047ff6",
+            "type": "leaf",
+            "state": {
+              "type": "outline",
+              "state": {
+                "file": "event_driven_architecture_in_golang/Event_Driven_Architecture_In_Golang.md",
+                "followCursor": false,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-list",
+              "title": "Outline of Event_Driven_Architecture_In_Golang"
+            }
+          }
+        ],
+        "currentTab": 4
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300
+  },
+  "left-ribbon": {
+    "hiddenItems": {
+      "switcher:Open quick switcher": false,
+      "graph:Open graph view": false,
+      "canvas:Create new canvas": false,
+      "daily-notes:Open today's daily note": false,
+      "templates:Insert template": false,
+      "command-palette:Open command palette": false,
+      "bases:Create new base": false
+    }
+  },
+  "active": "9c54bef072dec55b",
+  "lastOpenFiles": [
+    "ride_sharing_app/code/web/src/components/ui/skeleton.tsx",
+    "ride_sharing_app/code/web/src/components/ui/scroll-area.tsx",
+    "ride_sharing_app/code/web/src/components/ui/button.tsx",
+    "ride_sharing_app/code/web/src/components/ui/card.tsx",
+    "ride_sharing_app/code/web/src/components/ui/avatar.tsx",
+    "ride_sharing_app/code/web/src/utils/math.ts",
+    "ride_sharing_app/code/web/src/utils/geohash.ts",
+    "ride_sharing_app/code/web/src/lib/utils.ts",
+    "ride_sharing_app/code/web/src/hooks/useRiderStreamConnection.ts",
+    "ride_sharing_app/code/web/src/hooks/useDriverStreamConnection.ts",
+    "ride_sharing_app/code/web/src/components/ui",
+    "ride_sharing_app/code/web/src/assets/Car.svg",
+    "ride_sharing_app/code/web/README.md",
+    "ride_sharing_app/code/services/trip-service/README.md",
+    "ride_sharing_app/code/docs/architecture/rabbitmq-flow-v1.md",
+    "ride_sharing_app/code/docs/architecture/trip-creation-flow-v1.md",
+    "ride_sharing_app/code/docs/architecture/trip-creation-flow-v0.md",
+    "ride_sharing_app/code/docs/architecture/rabbitmq-flow-v0.md",
+    "ride_sharing_app/code/assets/images/thumbnail.png",
+    "ride_sharing_app/code/README.md",
+    "event_driven_architecture_in_golang/AGENTS.md",
+    "event_driven_architecture_in_golang/media/Figure_1.01_B18368.jpg",
+    "event_driven_architecture_in_golang/media/B18368_QR_Free_PDF.jpg",
+    "event_driven_architecture_in_golang/media/Cover.png",
+    "event_driven_architecture_in_golang/Event_Driven_Architecture_In_Golang.md",
+    "event_driven_architecture_in_golang/Summary.md",
+    "event_driven_architecture_in_golang/code/08_Transactional_Messaging/internal/web/swagger-ui/favicon-32x32.png",
+    "event_driven_architecture_in_golang/code/08_Transactional_Messaging/internal/web/swagger-ui/favicon-16x16.png",
+    "event_driven_architecture_in_golang/code/08_Transactional_Messaging/docs/EventStorming/BigPicture/bounded_contexts.png",
+    "event_driven_architecture_in_golang/code/08_Transactional_Messaging/docs/EventStorming/BigPicture/5_explicit_walkthrough.png",
+    "event_driven_architecture_in_golang/code/08_Transactional_Messaging/docs/EventStorming/BigPicture/4_people_and_systems.png",
+    "event_driven_architecture_in_golang/code/08_Transactional_Messaging/docs/ADL/0002-use-a-modular-monolith-architecture.md",
+    "event_driven_architecture_in_golang/code/08_Transactional_Messaging/docs/ADL/0001-keep-an-architecture-decision-log.md",
+    "event_driven_architecture_in_golang/code/07_Message_Workflows_Orchestrated_Saga/docs/ADL/0002-use-a-modular-monolith-architecture.md",
+    "event_driven_architecture_in_golang/code/07_Message_Workflows_Orchestrated_Saga/docs/ADL/0001-keep-an-architecture-decision-log.md",
+    "event_driven_architecture_in_golang/README.md",
+    "README.md"
+  ]
+}
