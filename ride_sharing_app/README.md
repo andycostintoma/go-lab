@@ -6,9 +6,9 @@ Ride Sharing App is a microservices learning project for building an Uber-style 
 
 - `Ride_Sharing_App.md` for the running architecture and implementation notes
 - `media/` for the screenshots and diagrams used by the notes
-- `code/` for the actual project, including the API gateway, trip, driver, and payment services, shared contracts, infrastructure, and web frontend
+- `code/` as a Git submodule pointing to the standalone repo: `https://github.com/andycostintoma/ride-sharing-app`
 
-The nested `code/README.md` makes it clear that the implementation is intended as a full course project with Docker, Tilt, Kubernetes, and a horizontally scalable service layout.
+The nested `code/README.md` now acts as the entry point for the standalone project repo while this folder keeps the higher-level notes and media around it.
 
 ## What it covers
 

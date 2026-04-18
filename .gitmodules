@@ -4,3 +4,6 @@
 [submodule "go_with_domain/wild-workouts-go-ddd-example"]
 	path = go_with_domain/wild-workouts-go-ddd-example
 	url = https://github.com/ThreeDotsLabs/wild-workouts-go-ddd-example.git
+[submodule "ride_sharing_app/code"]
+	path = ride_sharing_app/code
+	url = https://github.com/andycostintoma/ride-sharing-app.git
