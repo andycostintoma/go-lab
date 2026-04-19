@@ -4832,3 +4832,435 @@ The cleanest end-to-end flow to follow is:
 - [Transactional Outbox](https://microservices.io/patterns/data/transactional-outbox.html)
 - [Idempotent Consumer](https://microservices.io/post/microservices/patterns/2020/10/16/idempotent-consumer.html)
 - [Dependency Injection in Go](https://go.dev/blog/wire)
+
+# 10: Testing
+
+### Technical requirements
+
+- The Go programming language, version 1.18+
+- Docker
+
+Code snapshot used locally: `code/09_Testing/`
+
+Note:
+
+- the book chapter is Chapter 10
+- the matching local repo snapshot is `code/09_Testing/`
+
+### Coming up with a testing strategy
+
+Chapter 10 is about testing the asynchronous MallBots system at multiple scopes instead of expecting one style of test to catch every kind of failure.
+
+![Figure 10.1 - Testing pyramid](media/Figure_10.1_B18368.jpg)
+
+Figure 10.1: the chapter uses a four-layer testing pyramid or ziggurat.
+
+The strategy has four parts:
+
+- unit tests
+- integration tests
+- contract tests
+- end-to-end tests
+
+The main lesson is to match the test type to the failure mode:
+
+- logic and business rules belong mostly in unit tests
+- real infrastructure behavior belongs in integration tests
+- module and client boundaries belong in contract tests
+- critical business journeys belong in E2E tests
+
+#### Unit tests
+
+Unit tests should make up the bulk of the suite because they are fast, focused, and good at catching application and domain logic mistakes.
+
+At this level the SUT is very small, usually one function or one method, and dependencies should be replaced with test doubles.
+
+#### Integration tests
+
+Integration tests shift the SUT from one small unit to a component plus a real dependency.
+
+In this chapter the representative example is a repository talking to a real Postgres instance, because replacing the database with a fake would no longer test the actual integration behavior.
+
+#### Contract tests
+
+Contract tests protect the APIs and messages that connect modules and clients.
+
+The chapter uses consumer-driven contracts so consumers define what they rely on and providers verify that those expectations still hold.
+
+#### End-to-end tests
+
+E2E tests cover whole business flows across the application and its infrastructure.
+
+They are the broadest and slowest tests in the pyramid, so the chapter treats them as valuable but intentionally selective.
+
+### Testing the application and domain with unit tests
+
+The SUT for a unit test is the smallest useful unit in the application.
+
+![Figure 10.2 - Unit test scope](media/Figure_10.2_B18368.jpg)
+
+Figure 10.2: only the code under test is real; dependencies are replaced with test doubles.
+
+#### Table-driven testing
+
+The chapter leans on standard Go table-driven tests to organize multiple paths through one function without duplicating test structure.
+
+##### The table of test cases
+
+Representative shape:
+
+```go
+tests := map[string]struct {
+    input string
+    want  int
+}{
+    "word":  {input: "ABC", want: 3},
+    "words": {input: "ABC ABC", want: 6},
+}
+```
+
+The table holds the inputs and expected outputs for each named test case.
+
+##### Testing each test case
+
+The second half is iterating the table with subtests:
+
+```go
+for name, tc := range tests {
+    t.Run(name, func(t *testing.T) {
+        // arrange, act, and assert
+    })
+}
+```
+
+In the repo, `code/09_Testing/baskets/internal/application/application_test.go` is the clearest example.
+
+- `TestApplication_AddItem` uses subtests such as `NoBasket`, `NoProduct`, `NoStore`, `SaveFailed`, and `Success`
+- each case configures only the mocks needed for that path
+- the application service is the SUT, not the database, gRPC, or message bus
+
+#### Creating and using test doubles in our tests
+
+The chapter distinguishes four common test doubles:
+
+- fakes: working alternative implementations, often in-memory
+- stubs: static or predictable responses
+- spies: record calls and observed values
+- mocks: programmable expectations plus call assertions
+
+The repo mostly uses mocks because these tests care about interaction shape as much as returned errors.
+
+##### Working with mocks
+
+The book uses `testify/mock` and `mockery` to generate and use mocks.
+
+The repo follows that style in `code/09_Testing/baskets/internal/application/application_test.go`:
+
+- mocks are created for repositories and publishers
+- each test case configures only the calls it expects
+- the test body follows the AAA pattern: arrange, act, assert
+
+### Testing dependencies with integration testing
+
+Integration tests check how a real component behaves with a real dependency.
+
+![Figure 10.4 - Integration test scope](media/Figure_10.4_B18368.jpg)
+
+Figure 10.4: the SUT is now the component plus the real dependency.
+
+The chapter's strong preference is to bring dependencies into the tests instead of assuming every developer has the same machine setup.
+
+#### Incorporating the dependencies into your tests
+
+The chapter discusses two ways to bring infrastructure into integration tests.
+
+##### Option 1 - manually by using Docker Compose files
+
+This makes the dependency available, but it still depends on the developer remembering to prepare and reset the environment outside the test run.
+
+##### Option 2 - internalizing the Docker integration
+
+The preferred option is Testcontainers-Go because the test can start and tear down its own infrastructure, giving each run a cleaner and more repeatable environment.
+
+#### Running tests with more complex setups
+
+The chapter uses Testify suites to manage setup and teardown for heavier tests that need shared state across many test methods.
+
+#### Testing ProductCacheRepository
+
+The concrete repo anchor is `code/09_Testing/baskets/internal/postgres/product_cache_repository_integration_test.go`.
+
+That file is the book's main local example of a repository integration test against a real Postgres container.
+
+##### Suite composition
+
+That suite shows the core structure:
+
+- it is grouped with build tags such as `integration || database`
+- it can be skipped in short mode
+- it starts a temporary Postgres container
+- it opens a real DB connection and applies migrations
+- it injects a mock dependency where the repository still depends on another component
+
+##### Suite setup
+
+`SetupSuite()` starts the Postgres container, waits for readiness, opens the database connection, and applies migrations.
+
+##### Test setup
+
+`SetupTest()` creates a fresh mock dependency and a fresh repository instance for the next test.
+
+##### Test teardown
+
+`TearDownTest()` truncates the touched table so that each test runs from a clean slate.
+
+##### Suite teardown
+
+`TearDownSuite()` closes the database connection and terminates the container.
+
+##### The tests
+
+The individual tests then use a simple AAA flow against the real repository and real database.
+
+#### Breaking tests into groups
+
+The chapter gives three ways to control slower test groups.
+
+##### Running specific directories, files, or tests
+
+Use `go test` with package paths and `-run` when you want to target one package, one test, or one subtest.
+
+Representative commands from the chapter:
+
+```go
+go test ./baskets/internal/application
+go test ./baskets/internal/application -run "RemoveItem$"
+go test ./application -run "RemoveItem/NoProduct$"
+```
+
+##### Go build constraints
+
+Build tags let you group test files such as integration tests behind constraints like `//go:build integration` or `//go:build integration || database`.
+
+Representative commands from the chapter:
+
+```go
+go test ./internal/postgres -tags integration
+go test ./internal/postgres -tags database
+go test ./internal/postgres -tags integration,database
+```
+
+##### Using the short test option
+
+`testing.Short()` gives a second filter for longer-running tests.
+
+Representative command from the chapter:
+
+```go
+go test ./internal/postgres -tags integration -short
+```
+
+The tradeoff is the same as in the book:
+
+- build tags give more explicit grouping
+- short mode is simpler but only gives a binary split
+
+### Testing component interactions with contract tests
+
+Contract tests let the chapter verify APIs and messages without standing up whole multi-module environments.
+
+![Figure 10.7 - Consumer-driven contract testing](media/Figure_10.7_B18368.jpg)
+
+Figure 10.7: consumers define expectations, create contracts, and providers verify them.
+
+#### Consumer expectations
+
+Consumers should write expectations only for the requests, responses, metadata, and message payload fields they actually rely on.
+
+That keeps the contract focused on real dependency points rather than on everything a provider happens to return.
+
+#### Provider verifications
+
+Providers receive one or more contracts and verify that their real boundary behavior still satisfies those expectations.
+
+The provider test should stand up only enough of the provider to produce real responses or real messages.
+
+#### Not building any silos
+
+Contract testing speeds up feedback, but it does not replace cross-team communication.
+
+Consumers can make incorrect expectations and providers can introduce breaking changes, so teams still need shared understanding around provider states and supported contracts.
+
+#### Contract testing with Pact
+
+The chapter uses Pact to create, publish, and verify both REST and message contracts.
+
+##### Pact Broker
+
+Pact Broker stores contracts and verification results so consumers and providers can coordinate releases.
+
+##### CLI tools
+
+The Pact CLI tooling is required for local mock-provider and verification workflows.
+
+##### Additional Go tools
+
+The Go examples also rely on `pact-go` tooling for provider verification support.
+
+#### REST consumer and provider example
+
+The provider-side repo anchor is `code/09_Testing/baskets/internal/rest/gateway_contract_test.go`.
+
+That file demonstrates the provider verification shape described in the book:
+
+- start enough of the real HTTP provider to answer requests
+- keep deeper dependencies behind fakes or mocks
+- fetch contracts from Pact Broker
+- support provider states such as `a basket exists`, `a product exists`, and `a store exists`
+- verify that the real HTTP responses match consumer expectations
+
+#### Message consumer and provider example
+
+The same contract-testing idea is applied to asynchronous messages.
+
+Consumer-side anchors:
+
+- `code/09_Testing/baskets/internal/handlers/integration_events_contract_test.go`
+- `code/09_Testing/depot/internal/handlers/integration_events_contract_test.go`
+
+Those tests show the consumer pattern from the chapter:
+
+- define expected message metadata and JSON content with Pact matchers
+- deserialize the JSON payload into the real event type
+- pass the reconstructed event into the real handler
+- use mocks behind the handler to verify the expected downstream call
+
+Provider-side anchor:
+
+- `code/09_Testing/stores/internal/handlers/domain_events_contract_test.go`
+
+That provider verification builds the message by exercising the real producer flow:
+
+- create the real app and domain-event dispatcher
+- register the publishing handler
+- call producer behavior such as `CreateStore(...)` or `RebrandStore(...)`
+- capture the published message from a fake publisher
+- return the real message body and metadata to Pact for verification
+
+### Testing the application with end-to-end tests
+
+E2E tests cover the whole application flow with real infrastructure and minimal or no test doubles.
+
+![Figure 10.11 - End-to-end test scope](media/Figure_10.11_B18368.jpg)
+
+Figure 10.11: E2E tests provide business-level confidence at the highest cost and widest scope.
+
+The chapter uses Gherkin feature files plus `godog` to turn important flows into executable specifications.
+
+#### Relationship with behavior-driven development
+
+The book is explicit that BDD and E2E are related but not identical.
+
+- you can do BDD without E2E
+- you can do E2E without BDD
+- Gherkin is just the feature and scenario language, not the whole practice
+
+#### E2E test organization
+
+The local anchors are under `code/09_Testing/testing/e2e/`.
+
+Key files:
+
+- `code/09_Testing/testing/e2e/e2e_test.go`
+- `code/09_Testing/testing/e2e/baskets_context.go`
+- `code/09_Testing/testing/e2e/customers_context.go`
+- `code/09_Testing/testing/e2e/stores_context.go`
+- `code/09_Testing/testing/e2e/suite.go`
+
+`e2e_test.go` shows the harness shape:
+
+- create shared feature config
+- initialize feature-specific helpers and API clients
+- register step implementations on a `godog.TestSuite`
+- run grouped feature paths such as `features/baskets`, `features/orders`, and `features/stores`
+
+#### Making executable specifications out of our features
+
+The book's mechanism here is `godog` plus generated REST clients and step registration over Gherkin feature files.
+
+##### Example step implementation
+
+The local context files mirror the book's pattern: implement a step function, then bind it with `ctx.Step(...)`.
+
+`code/09_Testing/testing/e2e/baskets_context.go` also shows the runtime pattern around those steps:
+
+- keep generated API clients on the feature struct
+- reset DB state between scenarios
+- store cross-step state in `context.Context`
+- call the real REST API through generated Swagger clients
+
+#### What to test or not test
+
+The chapter warns against trying to cover everything with E2E tests.
+
+- start with the critical business flows
+- add coverage for important conditions around those flows
+- leave many lower-level paths to unit, integration, and contract tests
+- accept that some flows may be better handled manually
+
+### Summary
+
+Chapter 10 turns the earlier architecture chapters into a practical test strategy for an event-driven application.
+
+- unit tests cover application, domain, and business logic
+- integration tests uncover component and infrastructure interaction issues
+- contract tests protect APIs and messages between consumers and providers
+- E2E tests give business-level confidence that the application works as intended
+
+The big message is that asynchronous systems are very testable, but only when the team is deliberate about scope and uses the right test type for the right concern.
+
+## Key Takeaways
+
+- The goal is not one "best" test type but a layered strategy with different scopes.
+- Unit tests should form the bulk of the suite because they are the fastest and most focused.
+- Integration tests should use real dependencies where behavior actually matters, often via Testcontainers.
+- Contract tests are especially valuable in modular or distributed systems because they verify APIs and messages without requiring full-system environments.
+- E2E tests should cover only the most important user and business flows.
+- Gherkin and Godog let the repo reuse executable specifications at the highest test layer too.
+
+## Repo Anchors
+
+The testing material maps best to `code/09_Testing/`.
+
+High-value files to read alongside this summary:
+
+- `code/09_Testing/baskets/internal/application/application_test.go`
+- `code/09_Testing/baskets/internal/postgres/product_cache_repository_integration_test.go`
+- `code/09_Testing/baskets/internal/rest/gateway_contract_test.go`
+- `code/09_Testing/baskets/internal/handlers/integration_events_contract_test.go`
+- `code/09_Testing/depot/internal/handlers/integration_events_contract_test.go`
+- `code/09_Testing/stores/internal/handlers/domain_events_contract_test.go`
+- `code/09_Testing/testing/e2e/e2e_test.go`
+- `code/09_Testing/testing/e2e/baskets_context.go`
+- `code/09_Testing/testing/e2e/customers_context.go`
+- `code/09_Testing/testing/e2e/stores_context.go`
+- `code/09_Testing/testing/e2e/suite.go`
+
+Suggested reading order:
+
+1. `baskets/internal/application/application_test.go`
+2. `baskets/internal/postgres/product_cache_repository_integration_test.go`
+3. `baskets/internal/rest/gateway_contract_test.go`
+4. `baskets/internal/handlers/integration_events_contract_test.go`
+5. `stores/internal/handlers/domain_events_contract_test.go`
+6. `testing/e2e/e2e_test.go`
+7. one feature context such as `testing/e2e/baskets_context.go`
+
+That order mirrors the chapter’s test pyramid from smallest scope to largest.
+
+## Further Reading
+
+- Dave Cheney, *Prefer table driven tests*: <https://dave.cheney.net/2019/05/07/prefer-table-driven-tests>
+- Testcontainers for Go: <https://golang.testcontainers.org>
+- Pact documentation: <https://docs.pact.io>
+- Godog: <https://github.com/cucumber/godog>

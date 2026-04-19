@@ -6038,7 +6038,7 @@ This part consists of the following chapters:
 
 - *Chapter 10*, *Testing*
 - *Chapter 11*, *Deploying Applications to The Cloud*
-- *Chapter 12**, Monitoring and Observability*
+- *Chapter 12*, Monitoring and Observability
 
 ## Chapter 10: Testing
 
@@ -6121,7 +6121,7 @@ The system under test for a unit test is the smallest unit we can find in our ap
 
 Figure 10.2 – The scope of a unit test
 
-As shown in *Figure 10**.2*, only the function code is being tested. Any dependencies that the code under test requires must be provided as a test double such as a mock, a stub, or a fake dependency. Test doubles will be explained a little later in the *Creating and using test doubles in our* *tests* section.
+As shown in *Figure 10.2*, only the function code is being tested. Any dependencies that the code under test requires must be provided as a test double such as a mock, a stub, or a fake dependency. Test doubles will be explained a little later in the *Creating and using test doubles in our* *tests* section.
 
 Each test should focus on testing only one path through the function. Even for moderately complex functions, this can result in a lot of duplication in your testing functions. To help with this duplication, the Go community has adopted table-driven tests to organize multiple tests of a single piece of code under test into a single test function.
 
@@ -6209,7 +6209,7 @@ Each module that will be tested using mocks will have the following line added t
 //go:generate mockery --all --inpackage --case underscore
 ```
 
-This **go:generate** directive will look for the interfaces defined within the directory and subdirectories and create mocks of them. **--inpackage** and **--case underscore** will configure the tool to create the mocks in the current package using underscores in the filename. The **--all** flag will make the tool generate a mock for each interface that is found. When mockery creates mocks next to the interface, it will add a **Mock** prefix to each interface that it found in a file with a prefix of **mock\_**. For example, the **Application** interface is mocked as **MockApplication**, and that mock will be found in **/baskets/internal/application/mock_application.go**.
+This **go\:generate** directive will look for the interfaces defined within the directory and subdirectories and create mocks of them. **--inpackage** and **--case underscore** will configure the tool to create the mocks in the current package using underscores in the filename. The **--all** flag will make the tool generate a mock for each interface that is found. When mockery creates mocks next to the interface, it will add a **Mock** prefix to each interface that it found in a file with a prefix of **mock\_**. For example, the **Application** interface is mocked as **MockApplication**, and that mock will be found in **/baskets/internal/application/mock_application.go**.
 
 Organizing and naming test doubles comes down to preferences in most cases. My preference is to place them next to the interfaces and implementations that they double. Another preference is to keep the naming simple and use either a prefix or suffix to identify the type of test double that you are dealing with.
 
@@ -6518,7 +6518,7 @@ To group tests into an **integration** grouping, we can add the following with a
 
 The following are a few rules that need to be followed for the compiler to recognize the comment as a build constraint:
 
-- There must not be any spaces between the single-line comment syntax and **go:build**. Multiline comment syntax will not work.
+- There must not be any spaces between the single-line comment syntax and **go\:build**. Multiline comment syntax will not work.
 - The constraint must be followed by a blank line.
 - The constraint must be the first line in the file.
 
@@ -6569,7 +6569,7 @@ Checking for short mode can be added to any individual tests and subtests as wel
 
 The downside to using short mode is that the long-running tests are included by default, and we need to enable short mode to skip them. Another downside is that the option can be either on or off; there is no way to split your tests into more than two groups.
 
-All three options I’ve mentioned can be used together. You could treat short mode as a way to skip tests that are just a little longer when running unit tests, and likewise for the other kinds of tests when used with the **-****tags** option.
+All three options I’ve mentioned can be used together. You could treat short mode as a way to skip tests that are just a little longer when running unit tests, and likewise for the other kinds of tests when used with the **-tags** option.
 
 By using Docker containers, we can test more of our application by including real infrastructure in our tests, and by grouping the tests, we can exclude them when we want to run very fast unit tests. This form of testing will be too fragile to test integrations much larger than infrastructure interactions. For that testing, we can turn to contract tests.
 
@@ -6753,7 +6753,7 @@ To test the interaction with the consumer, we use the real client code to create
 
 When all of our consumer tests are passing, a contract will be generated using the consumer and provider names, such as **baskets-ui-baskets-api.json**. This contract will need to be shared with the provider somehow so that the other half of the tests can take place. Contracts can be shared via the filesystem, by hosting them, or they can be published to Pact Broker.
 
-To verify a contract with a provider, we need to receive simulated requests. However, we need to return real responses from a real provider. This means that we need to stand up just enough of the provider so that real responses can be built and returned to the mock consumer. The provider tests are located in the **/****baskets/internal/rest/gateway_contract_test.go** file.
+To verify a contract with a provider, we need to receive simulated requests. However, we need to return real responses from a real provider. This means that we need to stand up just enough of the provider so that real responses can be built and returned to the mock consumer. The provider tests are located in the **/baskets/internal/rest/gateway_contract_test.go** file.
 
 For the **Shopping Baskets** module, we can start up the gRPC and HTTP servers, use test doubles for all of the application dependencies, and still be able to generate real responses. This provider will need to be running in the background so that the mock consumer can send the interactions that each consumer contract has defined.
 
