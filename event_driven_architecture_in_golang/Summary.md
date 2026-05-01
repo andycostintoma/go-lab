@@ -5264,3 +5264,782 @@ That order mirrors the chapter’s test pyramid from smallest scope to largest.
 - Testcontainers for Go: <https://golang.testcontainers.org>
 - Pact documentation: <https://docs.pact.io>
 - Godog: <https://github.com/cucumber/godog>
+
+# 11: Deploying Applications to the Cloud
+
+## Chapter 11: Deploying Applications to the Cloud
+
+### Technical requirements
+
+- The Go programming language version `1.18+`
+- Docker
+- The Kubernetes CLI tools
+- Terraform
+- The AWS CLI
+- The PostgreSQL CLI tools
+
+Code snapshot used locally: `code/10_Deploying/`
+
+Note:
+
+- the book chapter is Chapter 11
+- the matching local repo snapshot is `code/10_Deploying/`
+
+### Turning the modular monolith into microservices
+
+Chapter 11 starts by changing the packaging and deployment model, not the core business architecture.
+
+The main goal is:
+
+- keep the existing modular monolith runnable
+- add a way to run each module as its own service
+- preserve as much of the local development experience as possible
+
+The book's sequence is:
+
+1. refactor the monolith startup into shared infrastructure
+2. move each module's composition root into a reusable `Root(...)` function
+3. add a standalone `cmd/service` entrypoint per module
+4. update Docker and Docker Compose to run either monolith or microservices
+5. restore the single-entry UX with a reverse proxy
+6. fix cross-service gRPC fallback dialing
+
+#### Refactoring the monolith construct
+
+The core refactor is the new shared `internal/system` package.
+
+In the local snapshot:
+
+- `code/10_Deploying/internal/system/system.go`
+- `code/10_Deploying/internal/system/types.go`
+
+`System` centralizes shared runtime resources:
+
+- config
+- Postgres connection
+- NATS / JetStream
+- HTTP mux
+- gRPC server
+- waiter / lifecycle handling
+- logger
+
+`NewSystem(...)` now initializes those resources once and exposes them through the `system.Service` interface.
+
+This is the book's replacement for the old monolith-local `app` struct.
+
+The updated monolith entrypoint is `code/10_Deploying/cmd/mallbots/main.go`.
+
+That file shows the new split clearly:
+
+- `system.NewSystem(cfg)` creates the shared runtime
+- `monolith` embeds `*system.System`
+- `startupModules()` still loops over the module list and calls `module.Startup(ctx, m)`
+
+So the monolith survives, but its startup now sits on top of a reusable service host.
+
+#### Updating the composition root of each module
+
+The next change is small but important: each module keeps `Startup(...)`, but the real composition work moves into `Root(...)`.
+
+Representative local anchors:
+
+- `code/10_Deploying/baskets/module.go`
+- `code/10_Deploying/customers/module.go`
+- `code/10_Deploying/stores/module.go`
+
+The pattern is:
+
+- `Startup(ctx, svc)` delegates to `Root(ctx, svc)`
+- the monolith calls `Startup(...)`
+- standalone services call `Root(...)` directly
+
+This is the key enabling move for Chapter 11. The same module composition root can now be reused in both deployment shapes.
+
+#### Making each module run as a service
+
+Each module gets its own `cmd/service/main.go`.
+
+Representative local anchor:
+
+- `code/10_Deploying/baskets/cmd/service/main.go`
+
+The service startup flow is:
+
+1. load config
+2. create `system.NewSystem(cfg)`
+3. run that module's migrations
+4. mount shared web assets
+5. call the module's `Root(...)`
+6. wait on web, RPC, and stream workers
+
+Compared with the monolith, the only big difference is that the standalone binary wires exactly one module instead of looping over all modules.
+
+#### Updates to the Dockerfile build processes
+
+The new packaging model needs a way to build one service binary at a time.
+
+The local anchor is:
+
+- `code/10_Deploying/docker/Dockerfile.microservices`
+
+This Dockerfile is multi-stage and uses a build argument:
+
+- `ARG service`
+- `go build ... ./${service}/cmd/service`
+
+That lets one Dockerfile build any module service by changing only the build arg.
+
+The same idea is reused later by Terraform in `deployment/infrastructure/ecr.tf`, which builds and pushes each service image with `build_args = { service = each.key }`.
+
+#### Updates to the Docker Compose file
+
+The local anchor is:
+
+- `code/10_Deploying/docker-compose.yml`
+
+This file shows the two deployment modes living side by side.
+
+Monolith mode:
+
+- service `monolith`
+- Compose profile `monolith`
+
+Microservices mode:
+
+- one service block per module such as `baskets`, `customers`, `stores`, and so on
+- each built with `docker/Dockerfile.microservices`
+- Compose profile `microservices`
+
+The important design choice is not just adding more containers. It is using Compose profiles so the user can choose one architecture shape while keeping the same underlying repo.
+
+##### Starting the monolith
+
+The book's local mode remains available through the monolith profile.
+
+##### Starting the microservices
+
+The first microservices run exposes the key operational problem: separate services cannot all own the same host port.
+
+The book explains the port-collision problem conceptually. In the local snapshot, the final Compose file takes the cleaner end state:
+
+- microservices only `expose` their internal ports
+- the public `8080` binding is moved to a reverse proxy
+
+That is the more important final design to understand.
+
+#### Adding a reverse proxy to the compose environment
+
+The local anchor is:
+
+- `code/10_Deploying/docker/nginx.conf`
+
+This is the book's fix for preserving the old single-entry local UX.
+
+The reverse proxy:
+
+- listens on `:8080`
+- routes `/api/baskets` to the baskets service
+- routes `/api/customers` to the customers service
+- routes `/api/stores` to the stores service
+- routes `*-spec` paths to each module's Swagger/OpenAPI endpoint
+- serves the root path through one service so the shared Swagger UI experience still works
+
+The matching Compose service is:
+
+- `reverse-proxy` in `code/10_Deploying/docker-compose.yml`
+
+This is a key Chapter 11 idea: once the app is split into services, the book immediately adds back a single front door so the developer and tester experience stays coherent.
+
+#### Fixing the gRPC connections
+
+After HTTP routing is fixed, the remaining issue is internal service-to-service gRPC fallback traffic.
+
+The problem:
+
+- in the monolith, a local gRPC dial could point back into the same process
+- in microservices, that same default can accidentally point a service at itself instead of the remote service it needs
+
+The fix is the new `RPC_SERVICES` configuration.
+
+Local anchor:
+
+- `code/10_Deploying/internal/rpc/config.go`
+
+Key additions:
+
+- `type Services map[string]string`
+- `func (c RpcConfig) Service(service string) string`
+- `func (s *Services) Decode(v string) error`
+
+This lets env var text such as `STORES=stores:9000,CUSTOMERS=customers:9000` become a usable map.
+
+Then composition roots can dial the correct remote service address instead of assuming the local server address.
+
+The final Compose file shows this concretely: each microservice receives the same `RPC_SERVICES` map via environment variables.
+
+This is the last step that makes the split architecture behave correctly under the book's existing fallback patterns and E2E flows.
+
+### Installing the necessary DevOps tools
+
+The second half of the chapter switches from local microservices to cloud deployment.
+
+The deployment toolchain the book uses is:
+
+- AWS CLI for authentication and cluster/account access
+- Terraform for infrastructure and application deployment
+- Helm for installing packaged Kubernetes components such as the AWS load balancer controller
+- K9s and optionally `kubectl` for browsing the cluster
+- `psql` for database initialization steps
+- `make` for wrapping multi-step commands
+
+#### Installing every tool into a Docker container
+
+The local snapshot includes the helper image under:
+
+- `code/10_Deploying/deployment/setup-tools/Dockerfile`
+- `code/10_Deploying/deployment/setup-tools/set-tool-alias.sh`
+- `code/10_Deploying/deployment/setup-tools/win-set-tool-alias.ps1`
+
+This tool container bundles:
+
+- AWS CLI
+- Terraform
+- Helm
+- K9s
+- `kubectl`
+- PostgreSQL client tools
+- `make`
+
+So the book offers two modes:
+
+- keep the host machine clean and run deployment tools from a container alias
+- or install the tools directly on the local machine
+
+#### Installing the tools into your local system
+
+The book then walks through direct installation, especially:
+
+- AWS CLI and IAM credentials
+- Terraform
+- Helm
+- K9s / `kubectl`
+- `psql`
+
+The important architectural point is not the installers themselves. It is that Chapter 11 now needs a real cloud-tooling workflow around the application, whereas earlier chapters only needed Go, Docker, and local runtime tools.
+
+### Using Terraform to configure an AWS environment
+
+The infrastructure phase lives under:
+
+- `code/10_Deploying/deployment/infrastructure/`
+
+The chapter's infrastructure target is AWS, specifically:
+
+- EKS for Kubernetes
+- ECR for service images
+- RDS for Postgres
+- VPC, subnets, security groups, IAM roles and policies
+- ALB integration for public ingress
+
+#### Preparing for the deployment
+
+The local infrastructure `Makefile` is:
+
+- `code/10_Deploying/deployment/infrastructure/Makefile`
+
+Key workflow commands:
+
+- `make ready` -> `terraform init` + `terraform validate`
+- `make deploy` -> `plan` + `apply` + kubeconfig update
+- `make destroy`
+
+The `terraform.tfvars` values the book emphasizes are about:
+
+- limiting public access with `allowed_cidr_block`
+- choosing region
+- choosing DB username
+- setting the ALB image repository for the selected region
+
+#### A look at the AWS resources we are deploying
+
+The local code mirrors the book's file-by-file breakdown:
+
+- `deployment/infrastructure/alb.tf`
+- `deployment/infrastructure/ecr.tf`
+- `deployment/infrastructure/eks.tf`
+- `deployment/infrastructure/rds.tf`
+- `deployment/infrastructure/security_groups.tf`
+- `deployment/infrastructure/vpc.tf`
+
+The key Chapter 11 point is that Terraform is not only provisioning raw cloud resources. It is also part of the image build-and-push path, especially through `ecr.tf`.
+
+#### Deploying the infrastructure
+
+The important practical flow is:
+
+1. initialize and validate Terraform
+2. apply infrastructure
+3. fetch kubeconfig
+4. inspect the ready cluster with K9s or `kubectl`
+
+The chapter also stresses the cost boundary:
+
+- this is not free-tier-safe demo infrastructure
+- `make destroy` is part of the normal workflow, not an afterthought
+
+#### Viewing the Kubernetes environment
+
+Once the infrastructure is up, the book expects you to inspect it through:
+
+- `k9s`
+- or `kubectl`
+
+The infrastructure phase is considered ready once the expected core Kubernetes and load-balancer resources are visible.
+
+### Deploying the application to AWS with Terraform
+
+The second Terraform phase lives under:
+
+- `code/10_Deploying/deployment/application/`
+
+This separation is important:
+
+- infrastructure deployment creates the cloud platform
+- application deployment places MallBots onto that platform
+
+The local `Makefile` matches the same pattern as the infrastructure one:
+
+- `make ready`
+- `make deploy`
+- `make destroy`
+
+#### Getting to know the application resources to be deployed
+
+Representative local anchors:
+
+- `deployment/application/kubernetes.tf`
+- `deployment/application/nats.tf`
+- `deployment/application/database.tf`
+- `deployment/application/svc_baskets.tf`
+- `deployment/application/svc_customers.tf`
+- `deployment/application/svc_stores.tf`
+
+The main design ideas are:
+
+- deploy into a dedicated Kubernetes namespace, `mallbots`
+- use a shared ConfigMap for common non-secret environment values
+- use encrypted Kubernetes Secrets for sensitive values such as `PG_CONN`
+- deploy NATS with persistent storage
+- deploy each microservice as its own Kubernetes Deployment and Service
+- expose Swagger through a shared ALB-backed ingress so the cloud UX matches the local reverse-proxy UX
+
+The local `kubernetes.tf` shows that clearly:
+
+- namespace creation
+- `common-config-map`
+- ALB ingress for Swagger
+- shared `RPC_SERVICES` value carried into the cluster configuration
+
+#### Deploying the application
+
+The application phase is conceptually straightforward once the infrastructure exists:
+
+1. initialize and validate application Terraform
+2. apply the Kubernetes and app resources
+3. wait for the deployments to become ready
+4. retrieve the generated Swagger URL
+
+The chapter's key promise is that, after all of this, the application experience is still recognizable:
+
+- same service boundaries
+- same public entry concept
+- same Swagger-driven access pattern
+
+That continuity is one of the strongest through-lines of the whole chapter.
+
+#### Tearing down the application and infrastructure
+
+The destroy sequence is intentionally two-stage:
+
+1. destroy application resources
+2. destroy infrastructure resources
+
+The book treats cleanup as part of the deployment design because AWS costs continue until resources are removed.
+
+### Summary
+
+Chapter 11 is about packaging and operating the application, not changing its core business architecture.
+
+The chapter first turns the modular monolith into a set of deployable service binaries while preserving the ability to keep running the monolith. It does that by extracting shared runtime setup into `internal/system`, moving module wiring into reusable `Root(...)` functions, and adding one `cmd/service` entrypoint per module.
+
+It then restores the local developer experience for the split system with Docker Compose profiles, a shared microservice Dockerfile, an Nginx reverse proxy, and explicit `RPC_SERVICES` routing for gRPC fallbacks.
+
+Finally, it deploys that microservice-shaped system to AWS in two Terraform phases: infrastructure first, then application resources. The result is a repeatable path from local modular monolith, to local microservices, to cloud-hosted microservices while keeping the application entry experience broadly the same.
+
+## Key Takeaways
+
+- Chapter 11 changes deployment shape more than business logic shape.
+- `internal/system` is the main enabling refactor because it turns monolith-only startup code into reusable service-host infrastructure.
+- Moving module composition into `Root(...)` lets the same module wiring support both monolith and standalone service binaries.
+- Compose profiles are the mechanism that keeps both monolith and microservices runnable from one repo.
+- The reverse proxy is essential because splitting services breaks the old single-port Swagger and API experience.
+- `RPC_SERVICES` is the key fix for service-to-service gRPC fallbacks after the split.
+- Terraform is used in two layers: provisioning AWS infrastructure and deploying the application onto it.
+- The chapter's operational discipline includes viewing the cluster and tearing it down, not just creating it.
+
+## Repo Anchors
+
+The deployment material maps best to `code/10_Deploying/`.
+
+High-value files to read alongside this summary:
+
+- `code/10_Deploying/internal/system/system.go`
+- `code/10_Deploying/internal/system/types.go`
+- `code/10_Deploying/cmd/mallbots/main.go`
+- `code/10_Deploying/baskets/module.go`
+- `code/10_Deploying/baskets/cmd/service/main.go`
+- `code/10_Deploying/docker/Dockerfile.microservices`
+- `code/10_Deploying/docker-compose.yml`
+- `code/10_Deploying/docker/nginx.conf`
+- `code/10_Deploying/internal/rpc/config.go`
+- `code/10_Deploying/deployment/setup-tools/Dockerfile`
+- `code/10_Deploying/deployment/infrastructure/Makefile`
+- `code/10_Deploying/deployment/infrastructure/ecr.tf`
+- `code/10_Deploying/deployment/infrastructure/eks.tf`
+- `code/10_Deploying/deployment/infrastructure/rds.tf`
+- `code/10_Deploying/deployment/application/Makefile`
+- `code/10_Deploying/deployment/application/kubernetes.tf`
+- `code/10_Deploying/deployment/application/nats.tf`
+- `code/10_Deploying/deployment/application/svc_baskets.tf`
+
+Suggested reading order:
+
+1. `internal/system/types.go`
+2. `internal/system/system.go`
+3. `cmd/mallbots/main.go`
+4. one module `module.go` plus its `cmd/service/main.go`
+5. `docker/Dockerfile.microservices`
+6. `docker-compose.yml`
+7. `docker/nginx.conf`
+8. `internal/rpc/config.go`
+9. `deployment/infrastructure/Makefile`
+10. `deployment/infrastructure/ecr.tf`
+11. `deployment/application/kubernetes.tf`
+
+That order mirrors the chapter's flow from local runtime refactor to local microservices to cloud deployment.
+
+## Further Reading
+
+- Terraform documentation: <https://developer.hashicorp.com/terraform/docs>
+- Amazon EKS User Guide: <https://docs.aws.amazon.com/eks/>
+- AWS Load Balancer Controller: <https://kubernetes-sigs.github.io/aws-load-balancer-controller/>
+- Helm documentation: <https://helm.sh/docs/>
+- K9s: <https://k9scli.io>
+
+# 12: Monitoring and Observability
+
+## Chapter 12: Monitoring and Observability
+
+### Technical requirements
+
+- The Go programming language version 1.18+
+- Docker version 20+
+- Docker Compose version 2+
+
+Code snapshot used locally: `code/11_Monitoring_Observability/`
+
+Note:
+
+- the book chapter is Chapter 12
+- the matching local repo snapshot is `code/11_Monitoring_Observability/`
+
+### What are monitoring and observability?
+
+Chapter 12 closes the book by making the system explain itself while it runs.
+
+The main distinction in the chapter is:
+
+- monitoring helps answer expected operational questions with logs and metrics
+- observability helps investigate unexpected behavior by correlating logs, metrics, and traces
+
+Monitoring is still useful for the standard questions:
+
+- is the service healthy?
+- is latency rising?
+- is CPU or memory increasing?
+- is the error rate crossing a threshold?
+
+But distributed applications make root-cause analysis harder because one request can move through many services, protocols, and asynchronous steps. The chapter's answer is to add tracing so requests can be followed across those boundaries instead of inferring the flow from isolated logs and charts.
+
+#### The three pillars of observability
+
+The chapter uses the common three-pillar framing:
+
+- logs explain why something happened
+- metrics show how much, how often, or how long something is happening
+- traces show how a single request flowed through the system and what it touched
+
+The repo already had logging before this chapter. The new work is mostly adding traces and metrics so that all three pillars are present.
+
+#### How tracing works
+
+The book first explains tracing conceptually using request, correlation, and causation identifiers.
+
+The important mental model is:
+
+- one incoming request starts or joins a trace
+- the trace is made of spans
+- each span represents one operation or boundary crossing
+- context propagation keeps child operations linked to the parent request
+
+In practice, this chapter does not build custom tracing IDs manually. Instead, it adopts OpenTelemetry so propagation, span creation, and export all use standard tooling.
+
+### Instrumenting the application with OpenTelemetry and Prometheus
+
+The local snapshot keeps the Chapter 11 deployment shape and adds instrumentation to it.
+
+The chapter chooses:
+
+- OpenTelemetry for distributed tracing
+- Prometheus for metrics
+- the existing logger for logs
+
+That choice reflects the state of the Go ecosystem at the time of the book: tracing in OpenTelemetry was ready, while metrics support in the Go SDK was still less mature, so the chapter talks directly to Prometheus for metrics.
+
+#### Adding distributed tracing to the application
+
+The main composition-root change is in `code/11_Monitoring_Observability/internal/system/system.go`.
+
+`System` now owns an OpenTelemetry tracer provider:
+
+- `initOpenTelemetry()` creates an OTLP gRPC exporter
+- it sets a batched `sdktrace.TracerProvider`
+- it installs a global text-map propagator for trace context and baggage
+- it registers tracer shutdown in waiter cleanup
+
+That is the runtime entry point for tracing.
+
+The gRPC layer is then instrumented at both ends.
+
+On the server side, `internal/system/system.go` adds `otelgrpc.UnaryServerInterceptor()` when building the gRPC server.
+
+On the client side, `code/11_Monitoring_Observability/internal/rpc/conn.go` adds `otelgrpc.UnaryClientInterceptor()` to the dialer so outbound gRPC calls continue the trace.
+
+For asynchronous messaging, the repo adds custom OpenTelemetry middleware because there is no built-in middleware for the repo's `internal/am` abstractions.
+
+Representative local anchors:
+
+- `code/11_Monitoring_Observability/internal/amotel/injector.go`
+- `code/11_Monitoring_Observability/internal/amotel/extractor.go`
+- `code/11_Monitoring_Observability/internal/amotel/metadata_carrier.go`
+
+The pattern is:
+
+- `OtelMessageContextInjector()` starts a producer span and injects trace metadata into outgoing message metadata
+- `OtelMessageContextExtractor()` reads that metadata, reconstructs the remote span context, and starts a consumer span for the handler
+
+This is one of the most important ideas in the chapter because it lets traces survive asynchronous boundaries instead of stopping at publish/consume edges.
+
+The chapter also adds trace annotations inside handlers rather than relying only on automatically created spans.
+
+Representative local anchors:
+
+- `code/11_Monitoring_Observability/baskets/internal/grpc/server.go`
+- `code/11_Monitoring_Observability/baskets/internal/handlers/domain_events.go`
+- `code/11_Monitoring_Observability/stores/internal/handlers/catalog.go`
+
+The pattern is consistent across modules:
+
+- gRPC handlers call `trace.SpanFromContext(ctx)`
+- request-specific attributes such as `BasketID`, `ProductID`, or `PaymentID` are attached to the span
+- errors are recorded with `RecordError(...)` and `SetStatus(...)`
+- message and domain-event handlers add timed events such as `Handling domain event` and `Handled domain event`
+
+The local code also wraps SQL transactions with tracing-aware helpers such as `postgresotel.Trace(...)`, so database work participates in the same traced flow.
+
+Representative local anchors:
+
+- `code/11_Monitoring_Observability/internal/postgresotel/trace.go`
+- `code/11_Monitoring_Observability/stores/module.go`
+
+#### Adding metrics to the application
+
+The metrics side starts by exposing a Prometheus scrape endpoint.
+
+In `code/11_Monitoring_Observability/internal/system/system.go`, `initMux()` now mounts:
+
+- `/liveness` for basic health
+- `/metrics` via `promhttp.Handler()` for Prometheus
+
+The repo then adds reusable message-level metric middleware in `internal/amprom`.
+
+Representative local anchors:
+
+- `code/11_Monitoring_Observability/internal/amprom/sent.go`
+- `code/11_Monitoring_Observability/internal/amprom/received.go`
+
+These capture:
+
+- sent message counts partitioned by message name
+- received message counts partitioned by message name and success/failure
+- received message latency histograms partitioned by message name and success/failure
+
+At the composition-root level, modules include those middleware when constructing publishers and subscribers.
+
+Representative local anchor:
+
+- `code/11_Monitoring_Observability/stores/module.go`
+
+That file shows the intended ordering clearly:
+
+- tracing middleware on publishers before the outbox publisher
+- sent counters on publishers
+- tracing and received-message counters on subscribers
+
+The chapter also adds business-level counters through thin application wrappers instead of stuffing metric logic into the core app structs.
+
+Representative local anchors:
+
+- `code/11_Monitoring_Observability/customers/internal/application/instrumented_app.go`
+- `code/11_Monitoring_Observability/baskets/internal/application/instrumented_app.go`
+
+These wrappers preserve the existing application APIs and tests while incrementing counters such as:
+
+- customers registered
+- baskets started
+- baskets checked out
+- baskets canceled
+
+This is one of the cleaner design choices in the chapter: instrumentation is added as a wrapper around application behavior rather than mixed into the domain logic itself.
+
+### Viewing the monitoring data
+
+Once the code is instrumented, the chapter adds the local tooling needed to consume that data.
+
+The local Docker Compose environment in `code/11_Monitoring_Observability/docker-compose.yml` adds four observability services:
+
+- `collector` for OpenTelemetry collection and processing
+- `jaeger` for trace visualization
+- `prometheus` for metric scraping and querying
+- `grafana` for dashboards
+
+Each application container is also given OpenTelemetry environment variables such as:
+
+- `OTEL_SERVICE_NAME`
+- `OTEL_EXPORTER_OTLP_ENDPOINT`
+
+That keeps the instrumentation generic while letting each service identify itself separately.
+
+Prometheus scraping is configured in:
+
+- `code/11_Monitoring_Observability/docker/prometheus/prometheus-config.yml`
+
+That file defines one scrape job per service plus collector-related scrape jobs.
+
+The collector is configured in:
+
+- `code/11_Monitoring_Observability/docker/otel/otel-config.yml`
+
+The key flow is:
+
+- app traces are exported to the collector over OTLP
+- the collector forwards traces to Jaeger
+- the collector also emits Prometheus-friendly metrics, including span metrics
+
+Grafana is pre-provisioned in:
+
+- `code/11_Monitoring_Observability/docker/grafana/provisioning/datasources/default.yaml`
+- `code/11_Monitoring_Observability/docker/grafana/provisioning/datasources/jaeger.yaml`
+- `code/11_Monitoring_Observability/docker/grafana/provisioning/dashboards/mallbots.json`
+- `code/11_Monitoring_Observability/docker/grafana/provisioning/dashboards/opentelemetry-collector.json`
+
+So the local environment already contains both the data sources and the dashboards the book wants to demonstrate.
+
+To generate activity, the chapter adds a small load generator:
+
+- `code/11_Monitoring_Observability/cmd/busywork/main.go`
+
+`busywork` creates several concurrent clients and sends repeated requests into the application so that traces, metrics, and dashboards become interesting enough to inspect.
+
+The practical viewing flow is:
+
+1. start the application and observability stack locally with Docker Compose
+2. run `cmd/busywork` to create realistic traffic
+3. inspect traces in Jaeger at `http://localhost:8081`
+4. inspect raw metrics in Prometheus at `http://localhost:9090`
+5. inspect dashboards in Grafana at `http://localhost:3000`
+
+The most important thing to notice in Jaeger is not just that traces exist, but that a single business flow can now be seen crossing gRPC calls, message publication, message handling, and downstream service work. That is the observability payoff for all the propagation work done earlier in the chapter.
+
+### Summary
+
+Chapter 12 adds the final operational layer to the architecture built across the rest of the book.
+
+The chapter starts by distinguishing monitoring from observability and by introducing traces as the missing third pillar alongside logs and metrics. It then instruments the application with OpenTelemetry tracing and Prometheus metrics by updating the shared runtime, gRPC boundaries, message publishers and subscribers, selected handlers, and a few application-service wrappers.
+
+Finally, it wires a local observability stack around the application with an OpenTelemetry collector, Jaeger, Prometheus, Grafana, and the `busywork` traffic generator. The result is a MallBots snapshot where the asynchronous system is not only deployable and testable, but also inspectable while it runs.
+
+## Key Takeaways
+
+- Chapter 12 is about making the distributed system explain its runtime behavior, not changing the business workflow again.
+- The chapter keeps the existing logger and adds the missing observability layers: traces and metrics.
+- `internal/system/system.go` is again the main integration point because it initializes OpenTelemetry, exposes `/metrics`, and installs gRPC tracing middleware.
+- `internal/amotel` is the key asynchronous observability bridge because it propagates trace context through message metadata.
+- `internal/amprom` captures message throughput and latency without forcing metrics code into every handler manually.
+- Span attributes, span events, and error recording in gRPC and message handlers make traces much more useful than auto-generated spans alone.
+- Thin `instrumented_app.go` wrappers are the chapter's preferred pattern for business counters because they preserve application boundaries and testability.
+- The local Compose stack matters as much as the code changes: collector, Jaeger, Prometheus, Grafana, and `busywork` together make the instrumentation visible.
+
+## Repo Anchors
+
+The monitoring and observability material maps best to `code/11_Monitoring_Observability/`.
+
+High-value files to read alongside this summary:
+
+- `code/11_Monitoring_Observability/internal/system/system.go`
+- `code/11_Monitoring_Observability/internal/system/types.go`
+- `code/11_Monitoring_Observability/internal/rpc/conn.go`
+- `code/11_Monitoring_Observability/internal/amotel/injector.go`
+- `code/11_Monitoring_Observability/internal/amotel/extractor.go`
+- `code/11_Monitoring_Observability/internal/amprom/sent.go`
+- `code/11_Monitoring_Observability/internal/amprom/received.go`
+- `code/11_Monitoring_Observability/internal/postgresotel/trace.go`
+- `code/11_Monitoring_Observability/baskets/internal/grpc/server.go`
+- `code/11_Monitoring_Observability/baskets/internal/handlers/domain_events.go`
+- `code/11_Monitoring_Observability/customers/internal/application/instrumented_app.go`
+- `code/11_Monitoring_Observability/baskets/internal/application/instrumented_app.go`
+- `code/11_Monitoring_Observability/stores/module.go`
+- `code/11_Monitoring_Observability/docker-compose.yml`
+- `code/11_Monitoring_Observability/docker/otel/otel-config.yml`
+- `code/11_Monitoring_Observability/docker/prometheus/prometheus-config.yml`
+- `code/11_Monitoring_Observability/docker/grafana/provisioning/datasources/default.yaml`
+- `code/11_Monitoring_Observability/docker/grafana/provisioning/datasources/jaeger.yaml`
+- `code/11_Monitoring_Observability/docker/grafana/provisioning/dashboards/mallbots.json`
+- `code/11_Monitoring_Observability/cmd/busywork/main.go`
+
+Suggested reading order:
+
+1. `internal/system/system.go`
+2. `internal/rpc/conn.go`
+3. `internal/amotel/injector.go`
+4. `internal/amotel/extractor.go`
+5. `internal/amprom/sent.go`
+6. `internal/amprom/received.go`
+7. one instrumented gRPC server such as `baskets/internal/grpc/server.go`
+8. one instrumented handler such as `baskets/internal/handlers/domain_events.go`
+9. one wrapper such as `customers/internal/application/instrumented_app.go`
+10. `stores/module.go`
+11. `docker/otel/otel-config.yml`
+12. `docker/prometheus/prometheus-config.yml`
+13. `docker-compose.yml`
+14. `cmd/busywork/main.go`
+
+That order mirrors the chapter's flow from instrumentation primitives, to module integration, to the local observability environment.
+
+## Further Reading
+
+- OpenTelemetry documentation: <https://opentelemetry.io/docs/>
+- Prometheus documentation: <https://prometheus.io/docs/introduction/overview/>
+- Grafana documentation: <https://grafana.com/docs/>
+- Jaeger documentation: <https://www.jaegertracing.io/docs/>
+- OpenTelemetry Go instrumentation for gRPC: <https://pkg.go.dev/go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc>

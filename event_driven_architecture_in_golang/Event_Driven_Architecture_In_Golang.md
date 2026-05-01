@@ -7643,9 +7643,9 @@ We now have our environment ready to execute the deployment scripts and configur
 
 ### Using Terraform to configure an AWS environment
 
-The MallBots application is going to be run from **AWS Elastic Kubernetes Service** (**EKS**), a managed Kubernetes environment. The IaC to create the infrastructure is going to be found in the **/****deployment/infrastructure** directory.
+The MallBots application is going to be run from **AWS Elastic Kubernetes Service** (**EKS**), a managed Kubernetes environment. The IaC to create the infrastructure is going to be found in the **/***deployment/infrastructure** directory.
 
-We will be configuring a small typical AWS environment across two **Availability** **Zones** (**AZs**):
+We will be configuring a small typical AWS environment across two **Availability Zones** (**AZs**):
 
 <img src="media/Figure_11.5_B18368.jpg" width="1246" height="875" alt="Figure 11.5 – Our AWS infrastructure " />
 
@@ -7658,7 +7658,7 @@ In the infrastructure directory, there are several Terraform files. Altogether, 
 - A PostgreSQL database using **Relational Database Service** (**RDS**). A single instance will serve all of the microservice databases and schemas.
 - Additional components such as a **Virtual Private Cloud** (**VPC**) and its subnets. Security groups, roles, and policies to both permit and lock down access.
 
-When running the next commands, you need to be in the **/****deployment/infrastructure** directory.
+When running the next commands, you need to be in the **/deployment/infrastructure** directory.
 
 #### Preparing for the deployment
 

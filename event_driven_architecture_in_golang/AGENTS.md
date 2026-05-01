@@ -19,9 +19,13 @@ When answering questions or making updates:
 1. Read the relevant section in `Summary.md`.
 2. Read the matching section in `Event_Driven_Architecture_In_Golang.md`.
 3. Read the corresponding chapter folder in `code/`.
-4. Explain the idea by tying book concept -> summary -> concrete code.
+4. Synthesize the idea by tying book concept -> summary -> concrete code.
+5. Ask coaching questions grounded in all three sources.
+6. Nudge the user toward the answer instead of immediately giving it away.
+7. Only update `Summary.md` when it is missing, unclear, or can be materially improved.
 
 Do not explain a chapter from code alone when the user is clearly following the book.
+Do not treat the study flow as lecture-first by default; prefer synthesis-first, then coached questions.
 
 ## Important Repo Shape
 
@@ -80,7 +84,8 @@ If a future session needs to explain a chapter, prefer this order:
 2. state what new mechanism the chapter adds
 3. show what changed from the previous chapter
 4. point to the small set of files that demonstrate the change
-5. only then explain supporting infrastructure
+5. ask a few guided questions to test the understanding
+6. only then explain supporting infrastructure where needed
 
 This repo is easiest to understand as a sequence of architectural changes, not as isolated files.
 
