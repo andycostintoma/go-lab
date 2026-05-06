@@ -185,6 +185,10 @@
   },
   "active": "2898cf55dc7c4776",
   "lastOpenFiles": [
+    "event_driven_architecture_in_golang/Summary.md",
+    "event_driven_architecture_in_golang/Event_Driven_Architecture_In_Golang.md",
+    "event_driven_architecture_in_golang/AGENTS.md",
+    "event_driven_architecture_in_golang/README.md",
     "event_driven_architecture_in_golang/code/11_Monitoring_Observability/testing/e2e/features/kiosk/shopping.feature",
     "event_driven_architecture_in_golang/code/11_Monitoring_Observability/testing/e2e/features/stores/create_store.feature",
     "event_driven_architecture_in_golang/code/11_Monitoring_Observability/testing/e2e/features/stores/create_product.feature",
@@ -195,7 +199,6 @@
     "event_driven_architecture_in_golang/code/11_Monitoring_Observability/testing/e2e/features/customers/register_customer.feature",
     "event_driven_architecture_in_golang/code/11_Monitoring_Observability/stores/internal/application/queries/get_stores.go",
     "event_driven_architecture_in_golang/code/11_Monitoring_Observability/stores/internal/application/queries/get_store.go",
-    "event_driven_architecture_in_golang/code/11_Monitoring_Observability/stores/internal/application/queries/get_product.go",
     "event_driven_architecture_in_golang/code/11_Monitoring_Observability/internal/web/swagger-ui/favicon-32x32.png",
     "event_driven_architecture_in_golang/code/11_Monitoring_Observability/internal/web/swagger-ui/favicon-16x16.png",
     "event_driven_architecture_in_golang/code/11_Monitoring_Observability/docs/EventStorming/BigPicture/bounded_contexts.png",
@@ -227,9 +230,6 @@
     "event_driven_architecture_in_golang/code/09_Testing/baskets/ui/node_modules/@pact-foundation/pact-core/standalone/win32-1.89.02-rc1/pact/README.md",
     "event_driven_architecture_in_golang/code/09_Testing/baskets/ui/node_modules/@pact-foundation/pact-core/standalone/linux-x64-1.89.02-rc1/pact/README.md",
     "event_driven_architecture_in_golang/code/09_Testing/baskets/ui/node_modules/@pact-foundation/pact-core/standalone/darwin-1.89.02-rc1/pact/README.md",
-    "event_driven_architecture_in_golang/code/09_Testing/baskets/ui/node_modules/@pact-foundation/pact-core/standalone/README.md",
-    "event_driven_architecture_in_golang/code/09_Testing/baskets/ui/node_modules/@types/node/README.md",
-    "event_driven_architecture_in_golang/code/09_Testing/baskets/ui/node_modules/graphql/README.md",
-    "event_driven_architecture_in_golang/code/09_Testing/baskets/ui/node_modules/@types/pino/README.md"
+    "event_driven_architecture_in_golang/code/09_Testing/baskets/ui/node_modules/@pact-foundation/pact-core/standalone/README.md"
   ]
 }

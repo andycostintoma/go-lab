@@ -8088,7 +8088,7 @@ Traces can also be annotated with events. Here, events are annotations that also
 
 Figure 12.4 – Spans annotated with events
 
-The domain event handlers in each module will record additional information about the events they handled and the amount of time that it took. The following excerpt is from the **/****baskets/internal/handlers/domain_events.go** file:
+The domain event handlers in each module will record additional information about the events they handled and the amount of time that it took. The following excerpt is from the **/***baskets/internal/handlers/domain_events.go** file:
 
 ```go
 
@@ -8388,7 +8388,7 @@ go run .
 
 Five clients will be started up and will begin making requests. You can increase the number of clients by passing in the **-clients=n** flag, with an upper limit of 25. To end the busywork application, use *Ctrl* + *C* or *Cmd* + *C*; this will kill the process.
 
-Now, we can look at some of the data that is being produced, starting with **Jaeger**. Open **http://localhost:8081** in your browser to open Jaeger. You should see a UI like this:
+Now, we can look at some of the data that is being produced, starting with **Jaeger**. Open http://localhost:8081 in your browser to open Jaeger. You should see a UI like this:
 
 <img src="media/Figure_12.6_B18368.jpg" width="1246" height="976" alt="Figure 12.6 – The Jaeger UI " />
 
@@ -8412,7 +8412,7 @@ Remember when we added the bookend events to the handling of the domain events? 
 
 A lot of data recorded is with each trace and that is its major downside. Recording a trace can be very demanding on the disk to store them, the CPU to process them, and the network to collect them. To lessen this resource demand, traces are sampled and only some are saved. Deciding to save a trace is either head-based, during the initial parent span creation, or tail-based, where the decision can be made by a child span at any time. OpenTelemetry only supports head-based decision-making. The upside is that it is easier to implement and work with, but the downside is that it drops traces that include errors that might be worth checking out. One day, OpenTelemetry might offer tail-based decision-making, but until it does, you should continue to use logging to capture important errors.
 
-We also have the metrics to check out in Prometheus. Opening **http://localhost:9090** in your browser will present you with the following UI:
+We also have the metrics to check out in Prometheus. Opening http://localhost:9090 in your browser will present you with the following UI:
 
 <img src="media/Figure_12.9_B18368.jpg" width="1246" height="975" alt="Figure 12.9 – The Prometheus UI " />
 
@@ -8426,7 +8426,7 @@ Figure 12.10 – Searching for the received messages counts for the cosec servic
 
 You could also try searching for **go_gc_duration_seconds** to see the garbage collector metrics for each microservice or any other metric you can think of. Like the traces, we are dealing with a very large amount of data – not as much as with the traces, but certainly a large number of metrics.
 
-Searching for metrics in Prometheus and viewing the raw data is not very compelling. That is why we also have Grafana running. Opening **https://localhost:3000/** and then browsing for dashboards will show the two dashboards that are installed under the **MallBots** folder. The **Application** dashboard will display some panels that will give you insights into how active the application is, and will display several panels showing the rates of incoming and outgoing messages for a few services:
+Searching for metrics in Prometheus and viewing the raw data is not very compelling. That is why we also have Grafana running. Opening https://localhost:3000/ and then browsing for dashboards will show the two dashboards that are installed under the **MallBots** folder. The **Application** dashboard will display some panels that will give you insights into how active the application is, and will display several panels showing the rates of incoming and outgoing messages for a few services:
 
 <img src="media/Figure_12.11_B18368.jpg" width="995" height="844" alt="Figure 12.11 – The MallBots Application dashboard " />
 

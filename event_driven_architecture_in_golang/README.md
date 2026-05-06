@@ -18,7 +18,10 @@ Inside `code/`, the material progresses through stages such as:
 - `05_Asynchronous_Connections`
 - `06_Event_Carried_State_Transfer`
 - `07_Message_Workflows_Orchestrated_Saga`
-- later chapter folders that continue into broader production concerns
+- `08_Transactional_Messaging`
+- `09_Testing`
+- `10_Deploying`
+- `11_Monitoring_Observability`
 
 ## What it covers
 
@@ -29,13 +32,14 @@ The material starts with the core mental model of events as immutable facts, the
 - event notification, event-carried state transfer, and event sourcing
 - eventual consistency and dual-write problems
 - workflows, asynchronous coordination, and system boundaries
+- testing, deployment, and operational concerns in distributed systems
 - the way services change shape once message flow becomes a first-class concern
 
 The notes and code reinforce each other. The markdown explains the trade-offs and vocabulary, while the chapter implementations show what those choices look like in real Go services.
 
 ## Why it matters
 
-This area matters because event-driven architecture is easy to talk about abstractly and much harder to reason about concretely. The combination of diagrams, summaries, and code makes it easier to see where the real friction lives: consistency, replayability, tracing, flow design, and the operational cost of looser coupling.
+This area matters because event-driven architecture is easy to talk about abstractly and much harder to reason about concretely. The combination of diagrams, summaries, and code makes it easier to see where the real friction lives: consistency, replayability, communication flow, state propagation, and the operational cost of looser coupling.
 
 It is especially useful as a reference when moving from ordinary CRUD services into systems where communication patterns and state propagation become part of the core design.
 
