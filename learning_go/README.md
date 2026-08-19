@@ -5,7 +5,6 @@ Learning Go is a broad fundamentals area built around chapter-by-chapter notes, 
 ## Main pieces
 
 - `book_2024.md` for the broader running notes
-- `concept_notes.md` for topic-focused explanations
 - `code/` for chapter-aligned examples and exercises
 - `code/simplewebapp/` for a small application example
 - `media/` for supporting images used by the notes
@@ -34,4 +33,4 @@ Learning Go is less about one finished product and more about building the menta
 
 ## Working style
 
-Use `concept_notes.md` when you want focused explanations, `book_2024.md` for broader coverage, and `code/` when you want runnable examples that match the ideas in the notes. The small `simplewebapp` example is a useful bridge from language mechanics into actual application structure.
+Use `book_2024.md` for broader coverage, and `code/` when you want runnable examples that match the ideas in the notes. The small `simplewebapp` example is a useful bridge from language mechanics into actual application structure.
