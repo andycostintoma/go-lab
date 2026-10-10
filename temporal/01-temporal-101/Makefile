@@ -7,7 +7,7 @@ logs:
 	docker compose -f docker-compose-dev.yml logs temporal
 
 worker:
-	go run ./exercises/01-hello-workflow
+	go run ./01-hello-workflow
 
 hello:
 	docker compose -f docker-compose-dev.yml exec temporal \
@@ -26,19 +26,19 @@ history-detailed:
 		temporal workflow show --workflow-id hello-andy-1 --detailed
 
 farewell-service:
-	go run ./exercises/02-farewell-workflow/microservice
+	go run ./02-farewell-workflow/microservice
 
 farewell-worker:
-	go run ./exercises/02-farewell-workflow/worker
+	go run ./02-farewell-workflow/worker
 
 farewell:
-	go run ./exercises/02-farewell-workflow/start Andy
+	go run ./02-farewell-workflow/start Andy
 
 finale-java-worker:
-	java -classpath ./exercises/03-finale-workflow/java-activity-and-worker-1.1.jar io.temporal.training.PdfCertWorker
+	java -classpath ./03-finale-workflow/java-activity-and-worker-1.1.jar io.temporal.training.PdfCertWorker
 
 finale-worker:
-	go run ./exercises/03-finale-workflow/worker
+	go run ./03-finale-workflow/worker
 
 finale:
-	go run ./exercises/03-finale-workflow/start "Andy Toma"
+	go run ./03-finale-workflow/start "Andy Toma"

@@ -4,7 +4,7 @@ import (
 	"context"
 	"log"
 	"os"
-	farewell "temporal101/exercises/02-farewell-workflow"
+	farewell "temporal101/02-farewell-workflow"
 
 	"go.temporal.io/sdk/client"
 )

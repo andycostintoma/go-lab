@@ -2,7 +2,7 @@ package main
 
 import (
 	"log"
-	finale "temporal101/exercises/03-finale-workflow"
+	_2_farewell_workflow2 "temporal101/02-farewell-workflow"
 
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/worker"
@@ -15,9 +15,11 @@ func main() {
 	}
 	defer c.Close()
 
-	w := worker.New(c, "generate-certificate-taskqueue", worker.Options{})
+	w := worker.New(c, "greeting-tasks", worker.Options{})
 
-	w.RegisterWorkflow(finale.CertificateGeneratorWorkflow)
+	w.RegisterWorkflow(_2_farewell_workflow2.GreetSomeone)
+	w.RegisterActivity(_2_farewell_workflow2.GreetInSpanish)
+	w.RegisterActivity(_2_farewell_workflow2.FarewellInSpanish)
 
 	err = w.Run(worker.InterruptCh())
 	if err != nil {

@@ -4,7 +4,7 @@ import (
 	"context"
 	"log"
 	"os"
-	finale "temporal101/exercises/03-finale-workflow"
+	"temporal101/03-finale-workflow"
 
 	"go.temporal.io/sdk/client"
 )

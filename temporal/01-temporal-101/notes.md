@@ -538,8 +538,8 @@ This exercise connects the CLI, Temporal Server, and a Go Worker to execute a gr
 
 **Files:**
 
-- `exercises/01-hello-workflow/greeting.go`: `GreetSomeone` receives a name and returns `"Hello " + name + "!"` with a `nil` error.
-- `exercises/01-hello-workflow/main.go`: connects to Temporal, creates a Worker polling `greeting-tasks`, registers `GreetSomeone`, and runs until interrupted.
+- `01-hello-workflow/greeting.go`: `GreetSomeone` receives a name and returns `"Hello " + name + "!"` with a `nil` error.
+- `01-hello-workflow/main.go`: connects to Temporal, creates a Worker polling `greeting-tasks`, registers `GreetSomeone`, and runs until interrupted.
 - `docker-compose-dev.yml`: runs the development server in Docker, exposes port `7233` and the Web UI at http://localhost:8233, and persists data in the `temporal-data` volume.
 - `Makefile`: provides commands for starting the server, viewing logs, running the Worker, and executing the Workflow.
 
@@ -559,7 +559,7 @@ Leave the Worker running, then execute the Workflow from another terminal:
 make hello
 ```
 
-`make worker` runs `go run ./exercises/01-hello-workflow`, including both Go files. `make hello` uses the CLI inside the Docker container to execute `GreetSomeone` on `greeting-tasks`, with Workflow ID `hello-andy-1` and JSON input `'"Andy"'`. Unlike `workflow start`, `workflow execute` waits for completion and displays the result: `"Hello Andy!"`.
+`make worker` runs `go run ./01-hello-workflow`, including both Go files. `make hello` uses the CLI inside the Docker container to execute `GreetSomeone` on `greeting-tasks`, with Workflow ID `hello-andy-1` and JSON input `'"Andy"'`. Unlike `workflow start`, `workflow execute` waits for completion and displays the result: `"Hello Andy!"`.
 
 **Execution flow:** CLI inside Docker → Temporal Server queues a task → Go Worker on the host runs `GreetSomeone` → server stores the result.
 
@@ -837,7 +837,7 @@ func GreetSomeone(ctx workflow.Context, name string) (string, error) {
 
 For our local setup:
 
-1. Edit `exercises/01-hello-workflow/greeting.go` and save the change.
+1. Edit `01-hello-workflow/greeting.go` and save the change.
 2. If you run `make hello` before restarting the Worker, the old process still returns `"Hello Andy!"`.
 3. In the terminal running `make worker`, press **Ctrl-C** to stop the Worker.
 4. Run `make worker` again. `go run` compiles the updated code and starts a new Worker process.
@@ -1047,7 +1047,7 @@ Properties left unspecified use their defaults. Choose the policy and timeout fo
 
 ## Hands-On Exercise #3: Farewell Workflow
 
-Create an Activity that calls a microservice for a Spanish farewell, register it with the Worker, and execute it from the existing greeting Workflow. The code is now in `exercises/02-farewell-workflow`.
+Create an Activity that calls a microservice for a Spanish farewell, register it with the Worker, and execute it from the existing greeting Workflow. The code is now in `02-farewell-workflow`.
 
 Before starting, stop Workers from earlier exercises with **Ctrl-C** so they do not pick up tasks intended for this exercise. Keep the Docker-based Temporal server running (`make up`).
 
@@ -1170,7 +1170,7 @@ The client application's `we.Get` can now return the persisted output, which the
 
 **Goal:** Run a Go Workflow that invokes a Java Activity to generate a PDF course-completion certificate, demonstrating polyglot execution and file processing.
 
-The local code is in `exercises/03-finale-workflow/`. This exercise only requires running existing code. You need Go and Java available locally, plus the Temporal dev server.
+The local code is in `03-finale-workflow/`. This exercise only requires running existing code. You need Go and Java available locally, plus the Temporal dev server.
 
 From the project root, start Temporal with `make up`, then run these commands in three separate terminals:
 
