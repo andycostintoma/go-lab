@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"log"
 	"os"
-	translation "temporal102/samples/using-structs"
+	translation "temporal102/01-using-structs"
 
 	"go.temporal.io/sdk/client"
 )

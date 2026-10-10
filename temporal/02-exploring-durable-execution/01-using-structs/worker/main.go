@@ -2,7 +2,7 @@ package main
 
 import (
 	"log"
-	translation "temporal102/samples/using-structs"
+	translation "temporal102/01-using-structs"
 
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/worker"
