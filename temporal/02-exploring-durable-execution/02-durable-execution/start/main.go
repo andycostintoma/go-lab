@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"log"
 	"os"
-	translation "temporal102/exercises/durable-execution/practice"
+	translation "temporal102/02-durable-execution"
 
 	"go.temporal.io/sdk/client"
 )

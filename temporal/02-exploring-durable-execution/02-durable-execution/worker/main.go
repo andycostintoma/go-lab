@@ -2,7 +2,7 @@ package main
 
 import (
 	"log"
-	translation "temporal102/exercises/durable-execution/solution"
+	translation "temporal102/02-durable-execution"
 
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/worker"

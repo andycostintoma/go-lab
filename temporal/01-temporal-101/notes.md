@@ -325,7 +325,7 @@ temporal <command> <subcommand> [flags]
 
 ### How to Install temporal
 
-Our Docker image includes the CLI, so no host installation is needed. `make up` starts the dev server, and the Makefile runs CLI commands inside its container. If a host CLI is needed on this Nix-managed machine, add it through the project's Nix dev shell.
+Our Docker image includes the CLI, so no host installation is needed. `make temporal-up` starts the dev server, and the Makefile runs CLI commands inside its container. If a host CLI is needed on this Nix-managed machine, add it through the project's Nix dev shell.
 
 ## Writing a Workflow Definition
 
@@ -548,18 +548,18 @@ Both Go files must use `package main`. The Worker's default client address, `loc
 Run these commands from the course directory (`01-temporal-101`):
 
 ```bash
-make up
-make logs
-make worker
+make temporal-up
+make temporal-logs
+make 01-hello-workflow-worker
 ```
 
 Leave the Worker running, then execute the Workflow from another terminal:
 
 ```bash
-make hello
+make 01-hello-workflow-start
 ```
 
-`make worker` runs `go run ./01-hello-workflow`, including both Go files. `make hello` uses the CLI inside the Docker container to execute `GreetSomeone` on `greeting-tasks`, with Workflow ID `hello-andy-1` and JSON input `'"Andy"'`. Unlike `workflow start`, `workflow execute` waits for completion and displays the result: `"Hello Andy!"`.
+`make 01-hello-workflow-worker` runs `go run ./01-hello-workflow`, including both Go files. `make 01-hello-workflow-start` uses the CLI inside the Docker container to execute `GreetSomeone` on `greeting-tasks`, with Workflow ID `hello-andy-1` and JSON input `'"Andy"'`. Unlike `workflow start`, `workflow execute` waits for completion and displays the result: `"Hello Andy!"`.
 
 **Execution flow:** CLI inside Docker → Temporal Server queues a task → Go Worker on the host runs `GreetSomeone` → server stores the result.
 
@@ -659,7 +659,7 @@ Display a Workflow's history with its Workflow ID:
 temporal workflow show --workflow-id my-first-workflow
 ```
 
-For our Docker-based Exercise #1, `make history` runs this command inside the container for `hello-andy-1`.
+For our Docker-based Exercise #1, `make 01-hello-workflow-history` runs this command inside the container for `hello-andy-1`.
 
 ### Interpreting Command Output
 
@@ -702,7 +702,7 @@ temporal workflow show \
   --detailed
 ```
 
-Use `make history-detailed` for the same operation in our Docker setup.
+Use `make 01-hello-workflow-history-detailed` for the same operation in our Docker setup.
 
 The same Events appear with additional context. Useful fields include:
 
@@ -724,7 +724,7 @@ The Web UI displays Workflow Execution status, inputs, outputs, and Event Histor
 
 The address depends on the deployment:
 
-- **Our Docker Compose setup:** Run `make up`, then open http://localhost:8233. Our `docker-compose-dev.yml` publishes the development server's UI port `8233`.
+- **Our Docker Compose setup:** Run `make temporal-up`, then open http://localhost:8233. Our `docker-compose-dev.yml` publishes the development server's UI port `8233`.
 - **Temporal Cloud:** Access the authenticated UI at https://cloud.temporal.io.
 - **Self-hosted production:** Ask the administrator for the UI hostname and port.
 
@@ -768,7 +768,7 @@ Additional namespaces can be registered using the `temporal` CLI. Application co
 
 This exercise uses the Web UI to inspect the Workflow Execution from Exercise #1. No code changes are needed.
 
-1. Ensure the Docker-based Temporal server is running with `make up`.
+1. Ensure the Docker-based Temporal server is running with `make temporal-up`.
 2. Open http://localhost:8233 and select the `default` namespace.
 3. View the recent Workflow Executions and find `hello-andy-1`, filtering by Workflow ID if needed.
 4. Click the execution to open its detail page.
@@ -786,7 +786,7 @@ This exercise uses the Web UI to inspect the Workflow Execution from Exercise #1
 
 Open the **Input and Results** section (`</>`) to inspect the payloads; labels and layout may vary with the UI version. The timestamps are specific to your execution, and their display depends on the selected timezone format.
 
-If you have not yet completed Exercise #1, run `make worker` in one terminal and `make hello` in another to create the execution. An already-completed execution can be inspected without leaving the Worker running.
+If you have not yet completed Exercise #1, run `make 01-hello-workflow-worker` in one terminal and `make 01-hello-workflow-start` in another to create the execution. An already-completed execution can be inspected without leaving the Worker running.
 
 ## Making Changes to a Workflow
 
@@ -838,10 +838,10 @@ func GreetSomeone(ctx workflow.Context, name string) (string, error) {
 For our local setup:
 
 1. Edit `01-hello-workflow/greeting.go` and save the change.
-2. If you run `make hello` before restarting the Worker, the old process still returns `"Hello Andy!"`.
-3. In the terminal running `make worker`, press **Ctrl-C** to stop the Worker.
-4. Run `make worker` again. `go run` compiles the updated code and starts a new Worker process.
-5. In another terminal, run `make hello` to create a new execution.
+2. If you run `make 01-hello-workflow-start` before restarting the Worker, the old process still returns `"Hello Andy!"`.
+3. In the terminal running `make 01-hello-workflow-worker`, press **Ctrl-C** to stop the Worker.
+4. Run `make 01-hello-workflow-worker` again. `go run` compiles the updated code and starts a new Worker process.
+5. In another terminal, run `make 01-hello-workflow-start` to create a new execution.
 6. Open http://localhost:8233, select the latest run of `hello-andy-1`, and inspect **Input and Results**. The new result should be `"¡Hola Andy!"`.
 
 The Makefile reuses the same Workflow ID. Once the previous execution has completed, the default reuse policy permits another execution with that ID; each run has a different Run ID. Inspect the latest run rather than expecting an old completed execution's stored result to change.
@@ -1047,9 +1047,9 @@ Properties left unspecified use their defaults. Choose the policy and timeout fo
 
 ## Hands-On Exercise #3: Farewell Workflow
 
-Create an Activity that calls a microservice for a Spanish farewell, register it with the Worker, and execute it from the existing greeting Workflow. The code is now in `02-farewell-workflow`.
+Create an Activity that calls a microservice for a Spanish farewell, register it with the Worker, and execute it from the existing greeting Workflow. The exercise code is in `02-farewell-workflow/`.
 
-Before starting, stop Workers from earlier exercises with **Ctrl-C** so they do not pick up tasks intended for this exercise. Keep the Docker-based Temporal server running (`make up`).
+Before starting, stop Workers from earlier exercises with **Ctrl-C** so they do not pick up tasks intended for this exercise. Keep the Docker-based Temporal server running (`make temporal-up`).
 
 1. **Activity — `translate.go`:** `FarewellInSpanish` calls `get-spanish-farewell` using the existing `callService` helper.
 2. **Registration — `worker/main.go`:** The Worker registers both `GreetInSpanish` and `FarewellInSpanish`.
@@ -1058,13 +1058,13 @@ Before starting, stop Workers from earlier exercises with **Ctrl-C** so they do 
 
    ```bash
    # Terminal 1: microservice
-   make farewell-service
+   make 02-farewell-workflow-service
 
    # Terminal 2: Worker
-   make farewell-worker
+   make 02-farewell-workflow-worker
 
    # Terminal 3: starter
-   make farewell
+   make 02-farewell-workflow-start
    ```
 
 Inspect `greeting-workflow` in the Web UI at http://localhost:8233. The starter prints both `¡Hola, Andy!` and `¡Adiós, Andy!`.
@@ -1081,10 +1081,10 @@ The following diagrams connect the farewell exercise's processes to Temporal's t
 
 | Actor | Responsibility in our example |
 | :--- | :--- |
-| Worker | Runs Workflow and Activity code; uses an embedded Temporal Client to communicate with the cluster. Started with `make farewell-worker`. |
-| Temporal Cluster | Orchestrates execution, manages Task Queues, and persists Event History. Started through Docker with `make up`. |
-| Client application | Requests Workflow Execution and retrieves its result through a Temporal Client. Started with `make farewell`. |
-| Microservice | Supplies Spanish greetings and farewells over HTTP. Called by the Activities, not by the Temporal Cluster. Started with `make farewell-service`. |
+| Worker | Runs Workflow and Activity code; uses an embedded Temporal Client to communicate with the cluster. Started with `make 02-farewell-workflow-worker`. |
+| Temporal Cluster | Orchestrates execution, manages Task Queues, and persists Event History. Started through Docker with `make temporal-up`. |
+| Client application | Requests Workflow Execution and retrieves its result through a Temporal Client. Started with `make 02-farewell-workflow-start`. |
+| Microservice | Supplies Spanish greetings and farewells over HTTP. Called by the Activities, not by the Temporal Cluster. Started with `make 02-farewell-workflow-service`. |
 
 The figure shows the three Temporal-facing actors. The microservice is the external dependency used by the application's Activities.
 
@@ -1114,7 +1114,7 @@ The farewell Workflow advances through several **Workflow Tasks**, separated by 
 
 ### Starting the Worker and Workflow
 
-With the registered Worker polling, `make farewell` requests execution. The server records **`WorkflowExecutionStarted`**, always the first Event, and schedules a Workflow Task. The Worker accepts it and begins running `GreetSomeone`.
+With the registered Worker polling, `make 02-farewell-workflow-start` requests execution. The server records **`WorkflowExecutionStarted`**, always the first Event, and schedules a Workflow Task. The Worker accepts it and begins running `GreetSomeone`.
 
 The initial Events are:
 
@@ -1172,20 +1172,20 @@ The client application's `we.Get` can now return the persisted output, which the
 
 The local code is in `03-finale-workflow/`. This exercise only requires running existing code. You need Go and Java available locally, plus the Temporal dev server.
 
-From the project root, start Temporal with `make up`, then run these commands in three separate terminals:
+From the project root, start Temporal with `make temporal-up`, then run these commands in three separate terminals:
 
 ```bash
 # Terminal 1: Java Activity Worker
-make finale-java-worker
+make 03-finale-workflow-java-worker
 
 # Terminal 2: Go Workflow Worker
-make finale-worker
+make 03-finale-workflow-worker
 
 # Terminal 3: start the Workflow with your full name
-make finale
+make 03-finale-workflow-start
 ```
 
-The `finale` target passes `"Andy Toma"` as the recipient; change that argument in the Makefile to use another full name.
+The `03-finale-workflow-start` target passes `"Andy Toma"` as the recipient; change that argument in the Makefile to use another full name.
 
 The Go Worker runs `CertificateGeneratorWorkflow` on `generate-certificate-taskqueue`. The Workflow requests the Activity by its registered type name, `"CreatePdf"`, rather than referencing a Go function. The separate Java Worker executes it using a Java graphics library and returns the generated file path. Cross-language execution requires matching Activity Types, Task Queues, and compatible serialized payloads.
 

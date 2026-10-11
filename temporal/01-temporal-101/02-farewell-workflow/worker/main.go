@@ -2,7 +2,7 @@ package main
 
 import (
 	"log"
-	_2_farewell_workflow2 "temporal101/02-farewell-workflow"
+	farewell "temporal101/02-farewell-workflow"
 
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/worker"
@@ -17,9 +17,9 @@ func main() {
 
 	w := worker.New(c, "greeting-tasks", worker.Options{})
 
-	w.RegisterWorkflow(_2_farewell_workflow2.GreetSomeone)
-	w.RegisterActivity(_2_farewell_workflow2.GreetInSpanish)
-	w.RegisterActivity(_2_farewell_workflow2.FarewellInSpanish)
+	w.RegisterWorkflow(farewell.GreetSomeone)
+	w.RegisterActivity(farewell.GreetInSpanish)
+	w.RegisterActivity(farewell.FarewellInSpanish)
 
 	err = w.Run(worker.InterruptCh())
 	if err != nil {

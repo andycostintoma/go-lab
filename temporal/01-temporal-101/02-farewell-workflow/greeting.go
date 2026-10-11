@@ -1,4 +1,4 @@
-package _2_farewell_workflow
+package farewell
 
 import (
 	"time"
